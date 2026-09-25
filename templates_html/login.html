@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Sign in — AI-Assisted Music Studio{% endblock %}
+{% block content %}
+<h2>Sign in with your Blind Art Server account</h2>
+<p class="hint">This app uses your existing Blind Art Server account ({{ server_url }}) — the same login used across the Blind Art apps.</p>
+
+{% if error %}
+  <p class="error" role="alert">{{ error }}</p>
+{% endif %}
+
+<form action="{{ url_for('do_login') }}" method="post" class="card">
+  <div class="field">
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" autocomplete="username" required>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button class="btn" type="submit">Sign in</button>
+</form>
+<p class="hint">Don't have a Blind Art Server account yet? Create one from any connected Blind Art app, then sign in here.</p>
+{% endblock %}

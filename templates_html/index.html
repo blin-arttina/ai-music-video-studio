@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Main Menu — AI-Assisted Music Studio{% endblock %}
+{% block content %}
+<h2>Main Menu</h2>
+
+<section class="card">
+  <h3>New Project</h3>
+  <form id="new-project-form">
+    <div class="field">
+      <label for="project-name">Project name</label>
+      <input id="project-name" name="name" type="text" required>
+    </div>
+    <div class="field">
+      <label for="project-description">Description (optional)</label>
+      <textarea id="project-description" name="description" style="min-height:80px;"></textarea>
+    </div>
+    <button class="btn" type="submit">Create Project</button>
+    <span id="new-project-status" role="status"></span>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Import Project (ZIP)</h3>
+  <p class="hint">Import a ZIP previously exported with "Export Complete Project" (in a project's Project tab). This creates a brand-new project with its media, saved text, and Timeline restored. A plain ZIP with no export manifest still imports, but only as files with no Timeline or text records.</p>
+  <form id="import-project-form">
+    <div class="field">
+      <label for="import-project-file">Project ZIP file</label>
+      <input id="import-project-file" name="file" type="file" accept=".zip" required>
+    </div>
+    <button class="btn" type="submit">Import Project</button>
+    <span id="import-project-status" role="status"></span>
+  </form>
+</section>
+
+<section>
+  <h3>Recent Projects</h3>
+  {% if projects %}
+  <ul class="project-list">
+    {% for p in projects %}
+    <li>
+      <a class="project-link" href="{{ url_for('project_page', project_id=p.id) }}">
+        <strong>{{ p.name }}</strong>
+        <span class="badge">{{ p.status }}</span>
+        {% if p.is_private %}<span class="badge protected">Private</span>{% endif %}
+        <br>
+        <span class="hint">{{ p.description or "No description yet." }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">No projects yet. Create your first one above — Music Studio, Video Studio, Audio Studio, and Animation Studio are all inside each project's workspace.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('new-project-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('project-name').value.trim();
+  const description = document.getElementById('project-description').value.trim();
+  const status = document.getElementById('new-project-status');
+  if (!name) { status.textContent = 'Please enter a project name.'; return; }
+  status.textContent = 'Creating...';
+  const res = await fetch('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description })
+  });
+  if (res.ok) {
+    const project = await res.json();
+    window.location.href = '/project/' + project.id;
+  } else {
+    const err = await res.json();
+    status.textContent = 'Error: ' + (err.error || 'could not create project');
+  }
+});
+
+document.getElementById('import-project-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const status = document.getElementById('import-project-status');
+  const fileInput = document.getElementById('import-project-file');
+  const file = fileInput.files[0];
+  if (!file) { status.textContent = 'Please choose a ZIP file.'; return; }
+  status.textContent = 'Importing...';
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/projects/import', { method: 'POST', body: formData });
+  if (res.ok) {
+    const project = await res.json();
+    window.location.href = '/project/' + project.id;
+  } else {
+    const err = await res.json().catch(() => ({}));
+    status.textContent = 'Error: ' + (err.error || 'could not import that file');
+  }
+});
+</script>
+{% endblock %}

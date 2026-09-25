@@ -1,0 +1,599 @@
+AI-ASSISTED MUSIC STUDIO AND VIDEO GENERATOR — PROJECT NOTES
+================================================================
+
+DEVELOPMENT DECISIONS
+----------------------
+- Built as a Flask web app (not a native Android app) so it can run
+  directly on the Blind Art Server / Render hosting pattern already
+  used for Blind-Art-Server and BuildYourAppAI, and so it's reachable
+  from any device with a browser without a separate APK build/signing
+  process. An Android WebView wrapper/APK is now scaffolded under
+  android-wrapper/ for anyone who wants a native home-screen shell too
+  (see the DEVELOPMENT DECISIONS entry further down and
+  android-wrapper/README_ANDROID_WRAPPER.txt) -- the web app itself
+  doesn't depend on it.
+- Authentication is fully delegated to the Blind Art Server (same
+  auth_client.py pattern as BuildYourAppAI) rather than building a
+  second, separate user/password system. This matches the stated goal
+  of every Blind Art app sharing one account system.
+- Text ownership protection and image/video watermarking are wired as
+  always-on, non-optional code paths (not settings a user can toggle
+  off), per the spec's "REQUIRED" sections. Watermark opacity is
+  clamped server-side (0.25-0.85) rather than allowing 0 (invisible)
+  or a value so extreme it fails silently.
+- AI generation modules (Music, Voice, Image, Animation) are real API
+  routes with no fabricated output: each checks for a provider API key
+  and returns a clear "not connected" message if none is set, rather
+  than pretending to generate content. Text-based AI features (Lyrics
+  drafting, Script/Video planning, Help Assistant) have a working
+  default implementation using an Anthropic API key, since that's a
+  text-completion task this workspace can already do honestly.
+- Every text edit creates a new version and a new immutable ownership
+  record rather than overwriting the previous one, so the "server-side
+  ownership records should be protected against unauthorized
+  modification" requirement holds even for the project owner's own
+  edits — history is append-only.
+- Media assets are hashed at upload time (SHA-256) so tampering or
+  substitution can be detected later even though the spec's mandatory
+  hashing/versioning requirement is written specifically for text.
+
+- Multi-track timeline (spec §6) is implemented as a form-driven editor
+  rather than a drag-and-drop canvas: tracks (music/vocals/dialogue/
+  sfx/image/video/animation/text/lyrics/AI) hold clips with exact
+  numeric fields for start time, duration, trim in/out, volume, and
+  fades. This was a deliberate choice, not a shortcut: precise numeric
+  fields with descriptive labels are more usable with a screen reader
+  than dragging a block on a canvas, which fits the accessibility
+  requirements in spec §16 better than a visual timeline would.
+  Clip splitting, moving, resizing, muting, and locking are implemented
+  and unit-tested (see "TESTING" below); a track can be locked to
+  prevent edits to its clips.
+
+- Real audio editing (spec §5) is built directly on ffmpeg's audio
+  filters rather than a Python audio library (pydub/librosa): this
+  sandbox couldn't reach pypi to install one, and ffmpeg was already a
+  hard dependency for video watermarking, so it does double duty with
+  no new dependency. Trim, fade in/out, volume, 3-band EQ, reverb and
+  echo (both via ffmpeg's aecho filter, layered differently), dynamic
+  range compression (acompressor), noise reduction (afftdn), and pitch
+  shifting (asetrate/atempo, tempo-corrected so duration doesn't drift)
+  are all implemented in source/project/audio_editor.py and composed
+  into ONE ffmpeg pass per render (not stacked separate re-encodes, to
+  avoid compounding quality loss). Each clip stores its own effect
+  settings; "Render Audio with These Settings" on a clip in the
+  Timeline tab downloads the processed file. This was tested for real
+  against actual generated audio (an ffmpeg sine-wave test tone), not
+  just unit-tested logic — see TESTING below.
+
+- In-app playback preview is now built: a GET route streams a media
+  asset's actual bytes (/api/projects/<id>/media/<media_id>/file) using
+  Flask's conditional=True, which serves HTTP Range requests so the
+  browser can seek/scrub instead of downloading the whole file first.
+  The Media Library now shows an inline <audio>/<video> player (or an
+  <img> for images) next to every uploaded file, and rendering a clip's
+  audio or video effects now shows a preview player immediately, in
+  addition to triggering the download. The route checks the requesting
+  user has view permission on the project AND that the asset actually
+  belongs to that project (not just any media_id), so one project's
+  files can't be played back through another project's page.
+
+- Real video editing (spec §7) is built the same way audio editing
+  was: entirely on ffmpeg filters in source/project/video_editor.py,
+  composed into one pass per render. Covers trim (reuses the clip's
+  existing trim_in/trim_out), crop (as fractions of the frame, so it's
+  resolution-independent), rotation (90/180/270), fade in/out, and a
+  text caption burned in at top/center/bottom. Deliberately does NOT
+  apply the required watermark — watermarking stays the separate,
+  mandatory export-time step in protection.py, so no editing action can
+  accidentally ship a video without it; the user edits freely in the
+  Timeline, then still uses "Export With Watermark" for the final file.
+  Tested against a real generated test video (not just unit tests):
+  confirmed trim produces the right duration, crop+rotate produce the
+  right output dimensions (640x480 cropped and rotated 90° correctly
+  became 384x512), all four rotation values produce correctly swapped
+  dimensions, and a frame was extracted and visually inspected to
+  confirm the caption text (including an apostrophe) renders cleanly
+  and legibly over the video.
+- Crossfade transitions between adjacent clips are now built, closing
+  the last gap in spec §7. audio_editor.py gained crossfade_audio()
+  (ffmpeg's acrossfade filter) and video_editor.py gained
+  crossfade_video() (ffmpeg's xfade for video plus acrossfade for its
+  audio track in the same pass). A new route,
+  /api/projects/<id>/clips/<clip_id>/crossfade-with-next, finds the
+  clip that starts immediately after the given clip on the same track,
+  renders each clip's own trim/effects first (reusing the existing
+  render_clip_audio/render_clip_video functions so the crossfade is
+  built from the same edited result the user has been previewing), then
+  crossfades the two rendered files together and streams back the
+  result. Audio-audio and video-video pairs are supported; mixed pairs
+  (e.g. an audio clip followed by a video clip) are rejected with a
+  clear error rather than guessing. A "Crossfade into the next clip on
+  this track" panel was added under each clip in the Timeline tab, with
+  duration and (for video) transition-style controls, following the
+  same render-then-preview-then-download pattern as the existing audio/
+  video render buttons.
+  xfade requires both video inputs at the same resolution/frame rate,
+  so both are normalized (scaled to the first clip's dimensions, sar=1,
+  30fps) before the transition is applied.
+  Tested against real generated media, not just unit-tested logic:
+    - Audio: two generated sine tones (300Hz/600Hz, 5s each) crossfaded
+      with a 1.5s transition produced an 8.5s file (5+5-1.5), confirmed
+      via ffprobe.
+    - Video: two generated test videos with deliberately mismatched
+      resolution/fps (640x480@25fps vs 320x240@30fps, 4s each)
+      crossfaded with a 1s transition produced a ~7s file (4+4-1) at
+      the correctly normalized 640x480. A frame extracted at the exact
+      transition midpoint was visually inspected and confirmed the two
+      source colors had genuinely blended (not just cut), proving the
+      transition is a real pixel-level crossfade.
+  This was NOT run through the full Flask app end-to-end (see "No
+  automated test suite" below for why), but every function it calls
+  (render_clip_audio, render_clip_video, crossfade_audio,
+  crossfade_video) was independently verified against real media as
+  described above and in the audio/video editing sections.
+
+- Browser microphone recording (spec §5's "Record") is now built: a
+  "Record from Microphone" panel in the Media Library uses the
+  browser's MediaRecorder API, shows a live recording timer, and
+  uploads the result through the existing media-upload endpoint (no
+  new backend route needed — just added "webm" to the allowed audio
+  extensions, since that's what MediaRecorder produces by default).
+  Verified against a real generated webm file (not just a unit test):
+  confirmed ffmpeg reads it correctly and that a recorded clip flows
+  through trim/fade/volume/noise-reduction in audio_editor.py exactly
+  like an uploaded file — recordings and uploads share one pipeline
+  with no special-casing.
+
+- Timeline undo/redo (spec §17) is now built. Every action that changes
+  the Timeline's structure -- adding, moving, resizing, trimming,
+  splitting, or deleting a clip; creating, renaming, reordering, or
+  deleting a track; muting/locking/hiding either one -- snapshots the
+  whole timeline (all tracks and their clips) onto a per-project undo
+  stack before applying the change, in source/project/history.py. Undo
+  pops that stack and restores the timeline to exactly that state,
+  pushing what it just replaced onto a redo stack so it can be redone;
+  a new action after an undo clears the redo stack, the same as any
+  ordinary editor. Both stacks are capped at 50 entries per project so
+  a long editing session can't grow them without bound. A new "Undo" /
+  "Redo" button pair sits at the top of the Timeline tab, enabled or
+  disabled based on whether there's anything to undo/redo.
+  This deliberately covers the Timeline only, not the Music & Text
+  Studio text editor -- saved text already has its own append-only
+  version history (TextContent/TextRevision, with a working "Restore"
+  endpoint) that serves the same purpose, and layering a second undo
+  mechanism on top of that would just be two competing sources of truth
+  for the same content.
+  Because this sandbox still can't pip-install flask_sqlalchemy to run
+  the real Flask app end-to-end, the undo/redo logic itself was tested
+  by injecting a small in-memory fake for source/project/models (Track/
+  Clip/TimelineHistory with just enough .query/.filter_by/.delete/
+  session behavior to matter) and running the real history.py against
+  it: confirmed a snapshot taken before a mutation is restored exactly
+  (including that clip/track ids are preserved on restore, and that
+  deleting a track's row also removes its clips, mirroring the real
+  model's cascade), that undo moves the changed state to the redo stack
+  and redo moves it back, that a fresh action after an undo correctly
+  clears the redo stack, and that undoing or redoing with an empty
+  stack raises a clear error rather than silently doing nothing.
+- A lightweight crash-recovery draft was added for the Music & Text
+  Studio's "new item" form: as the user types a title or body, it's
+  saved to the browser's own localStorage a moment after each change
+  (debounced, so it isn't writing on every keystroke) and restored
+  automatically if the tab is closed, the browser crashes, or the page
+  is reloaded before it's explicitly saved -- with a visible notice and
+  a "Discard Draft" button so it's never silently overwriting anything.
+  This is deliberately separate from the server-side ownership/version
+  history: the draft covers typing that hasn't been saved yet at all,
+  while an explicit Save is still what creates the hashed, versioned,
+  permanent record. The draft lives only in that browser (not synced
+  across devices) and is cleared the moment a save succeeds.
+  Full auto-save of already-saved content (periodically re-saving a
+  text item's edits without a manual Save click, or a similar draft
+  layer for in-progress Timeline changes) is still open -- the Timeline
+  doesn't need it as urgently since every field there already commits
+  immediately on change/blur rather than sitting as an unsaved draft.
+
+- Export settings (spec §18) are now built into "Export With Watermark"
+  in the Media Library: Resolution (source / 1080p / 720p / 480p, by
+  longer side, aspect-ratio preserved, and images are only ever scaled
+  down, never blurrily upscaled), Frame rate (video only: source / 24 /
+  30 / 60 fps), Video quality (video only: high/medium/low, mapped to
+  an ffmpeg CRF value so "high" is a bigger, cleaner file and "low" is
+  a smaller one), Audio quality (video only: 128/192/256/320 kbps), and
+  File format (image: PNG or JPG; video: MP4 [H.264/AAC, plays almost
+  everywhere] or WebM [VP9/Opus, smaller and web-friendly]). All of it
+  lives alongside the required watermark in the same ffmpeg pass for
+  video (source/project/protection.py's watermark_video) or the same
+  Pillow pass for images (watermark_image) -- there is still no way to
+  export without the watermark, these settings only change the size/
+  quality/format of the watermarked result. Every setting defaults to
+  "keep the source as it is," so nothing changes for anyone who ignores
+  the new controls.
+  Tested against real generated media, not just unit-tested logic:
+  a 1280x720/30fps test video with audio was exported at 480p/24fps/
+  low-quality/128kbps MP4 and confirmed via ffprobe to actually be
+  854x480 at 24fps; the same source was separately exported as WebM
+  and confirmed via ffprobe to be VP9 video + Opus audio; a frame was
+  extracted from the downscaled MP4 and visually confirmed the
+  watermark text still renders cleanly after the resize. A 2000x1000
+  test image was exported at "720p" as a JPG and confirmed to come out
+  1280x640 (aspect preserved) in JPEG format, and separately at
+  "source" resolution as a PNG and confirmed to keep its original
+  2000x1000 size.
+
+- Studio branding (creator-requested, not in the original spec list):
+  a creator can now save their own studio/label name and a logo image
+  ONCE, in the Settings tab, and both are reused automatically as the
+  default watermark across EVERY one of their projects, not just the
+  one they set it in. This is deliberately account-wide rather than
+  per-project: source/project/models.py's new StudioBrand table is
+  keyed by the Blind Art Server account email (the same identity
+  everything else here is scoped to), not by project id, and
+  source/project/branding.py stores the logo file under a
+  studio_brands/<hashed-email>/ folder outside any single project's
+  own folder, so it survives that project being deleted or duplicated.
+  The logo is always an ADDITION next to the required watermark text,
+  never a replacement for it -- there's still no way to export with a
+  logo and no text, since the text is what the "REQUIRED, always-on"
+  watermark rule is about; the logo is an extra the creator asked for.
+  On export, if a saved studio name exists it's used automatically
+  whenever the "Watermark text" field is left blank (typing something
+  there still overrides it for a one-off export), and a saved logo is
+  included by default with an "Include my studio logo" checkbox to
+  turn it off for a single export without deleting it.
+  Image watermarking (Pillow, in watermark_image) draws the logo and
+  text side by side as ONE combined mark, so corner/center/tiled
+  positioning treats them as a single unit -- confirmed by generating a
+  logo (a red circle) and a background image, exporting at "corner" and
+  "tiled" positions, and visually inspecting both: the corner export
+  shows the logo directly beside the studio name, and the tiled export
+  repeats that same logo+text pair as one evenly spaced unit across the
+  whole image.
+  Video watermarking (ffmpeg, in watermark_video) is more constrained:
+  ffmpeg can't size one filter's input from another filter's output
+  inside a single filter graph without the added complexity of
+  `scale2ref`, so the logo is scaled to a FIXED pixel height
+  (LOGO_OVERLAY_HEIGHT_PX = 64) regardless of the chosen export
+  resolution, rather than a percentage of frame height the way the
+  image path does -- a documented simplification, not a bug: it reads
+  a bit large on a 480p export and a bit small on a 4K one, but it
+  always composites correctly and never overlaps the text (the text's
+  position is shifted to make room for it, using the same fixed pixel
+  math). For the "tiled" position specifically, the logo is shown ONCE
+  at a fixed corner rather than tiled like the text is, since actually
+  tiling a static image over a moving video isn't worth the filter-
+  graph complexity for a watermark; this is a real difference from how
+  images handle "tiled" and is written down here so it isn't mistaken
+  for a bug later. Tested against a real generated video: exported with
+  a logo at the "corner" position, then a frame was extracted and
+  visually confirmed to show the logo and studio-name text side by
+  side in the corner, both at the same opacity, with no overlap.
+
+- AI Project Memory (spec §14) is now built. Every AI Assistant call
+  (Ask a question, Draft Lyrics, Draft Video Plan) automatically gets a
+  short summary of the CURRENT project attached server-side, in
+  source/ai/context.py's build_project_context(): the project's name,
+  description, and status; the studio brand name if one is saved;
+  media counts by category; the TITLES and KINDS of saved text items
+  (lyrics/notes/scripts/etc., up to the 20 most recently updated) --
+  never the text bodies themselves; and the timeline's track count,
+  clip count, and total duration. This replaced the previous behavior,
+  where the AI routes lived outside any project (/api/ai/*) and the
+  frontend sent a fake "project context" that was just the browser tab
+  title -- the AI genuinely had no idea what was in the project before.
+  The AI routes are now project-scoped (/api/projects/<id>/ai/*, e.g.
+  .../ai/lyrics, .../ai/help) to match every other route in this app,
+  which also means AI generations that produce something (lyrics,
+  scripts, video plans) are now recorded in that project's Audit Log.
+  Deliberately excludes text BODIES from the context by default: saved
+  lyrics/notes/scripts are otherwise treated as private, protected
+  content, and silently attaching their full text to every AI Assistant
+  call would quietly work around that. The assistant is told explicitly
+  in its system prompt that the context lists titles/kinds/counts only
+  and not to claim to know what's actually written inside a text item
+  it hasn't been shown.
+  Tested directly (this is a pure function with no database dependency,
+  so it didn't need a shim): built context for an empty project (all
+  fields correctly say "none yet" / "empty so far" / "no tracks yet")
+  and for a populated one with 6 saved text items, confirming the
+  output correctly lists the 5 most recent, adds "and 1 more" for the
+  rest, and includes the studio brand, asset counts, and timeline
+  totals accurately.
+
+- Collaboration UI (spec Phase 5) is now built. The invite/permission-
+  tier/revoke API already existed (Collaborator model, /collaborators
+  routes); this adds a "Collaborators" card in the Project tab (owner
+  only -- it hides itself entirely for anyone the API returns 403 to,
+  rather than showing a confusing error) with an invite form (email +
+  permission tier: view/comment/edit/full) and, per invited person, a
+  live permission-tier dropdown and a Revoke/Restore Access button.
+  Found and fixed a real bug while wiring this up: Collaborator.to_dict()
+  never included the collaborator's own `id`, so the existing revoke
+  endpoint (/collaborators/<id>/revoke) was unusable from any client
+  that only had what to_dict() gave it -- there was simply no way to
+  get a collaborator's id to revoke them. Fixed by adding "id" to
+  to_dict(). Also added a new PATCH /collaborators/<id> route (owner
+  only) so a permission tier can be changed or access restored without
+  deleting and re-inviting, since the original API only supported
+  inviting and one-way revoking.
+  Not built (still owner-only, and okay for now): the "Comment" tier is
+  accepted and stored like any other permission level, but there's no
+  actual commenting feature anywhere in the app yet for it to unlock --
+  it currently behaves the same as "View" in practice. Actual comment
+  threads on a project would be a further feature if wanted later.
+- Downloadable Asset & Template Library (spec section 23) is now built.
+  A new LibraryItem model distinguishes two kinds of item: a
+  "project_template" (pure data -- a small named set of tracks, e.g.
+  "Song with Vocals + Instrumental," "Narrated Video," "Two-Voice
+  Podcast" -- applied by creating real Track rows in a project the user
+  can edit) and a "media_asset" (an actual bundled file copied into a
+  project's Media Library, exactly like an upload). A new "Library" tab
+  sits between Media Library and Timeline, listing both kinds with an
+  "Add" button on each.
+  No third-party stock content is bundled anywhere, since none of it
+  could legitimately be redistributed by this app. Instead, every seeded
+  free item is originally generated by the app itself: three short
+  ffmpeg sine-wave tones/chimes (a 440 Hz "Soft Chime," a 110 Hz "Deep
+  Tone," an 880 Hz "Bright Ping") and three Pillow-drawn gradient
+  background images (blue-purple, warm sunset, dark teal, each
+  1280x720). Verified for real: each generated .wav was checked with
+  ffprobe (correct sample rate/duration), and a gradient .png was
+  visually inspected frame-by-frame and confirmed to render a clean,
+  correct gradient. seed_library() only creates these on first run (it
+  checks the table is empty first), so restarting the server never
+  duplicates them, and importing an asset into a project was confirmed
+  to copy a real, playable file into that project's own Media Library
+  folder and hash it like any normal upload.
+  The model also supports paid items (is_free / price_usd fields), but
+  since no payment provider is connected, requesting a paid template or
+  asset returns a clear "purchasing isn't connected yet" error (HTTP
+  402) rather than granting it for free or faking a purchase -- the same
+  honest pattern already used for an unconnected AI provider. This was
+  tested directly: a paid template item was created and confirmed to
+  raise that error instead of being applied.
+  Found and fixed a real, unrelated bug while building this: branding.py
+  (Studio Branding, from the previous feature) referenced
+  `CONFIG.BASE_DIR`, which does not exist on the Config class -- only
+  the plain module-level `BASE_DIR` in config.py does (manager.py uses
+  it that way). This meant every studio-logo save would have crashed
+  with an AttributeError the first time it actually ran. Fixed by
+  importing and using the module-level BASE_DIR directly, matching
+  manager.py's own pattern.
+- ZIP project import (spec §12) is now built, alongside a real gap found
+  while building it: "Export Complete Project (ZIP)" only ever zipped
+  the project's raw files -- it never recorded the database rows (media
+  metadata, saved text and its ownership/version history, or the
+  Timeline's tracks and clips) anywhere in the archive. An import built
+  against that would have restored files with no project structure
+  behind them. So export was extended first: every export or backup ZIP
+  now also embeds a manifest.json (built by the new
+  build_project_manifest()) describing the project's media assets, text
+  contents + revisions, ownership records, and tracks + clips, with
+  media assets and clips referenced by their file's path inside the ZIP
+  (for media) or their stable content_id (for text) rather than by
+  database id, since those ids won't exist yet on the importing side.
+  Import (new manager.import_project_zip(), used by a new
+  POST /api/projects/import route and an "Import Project (ZIP)" form
+  on the Main Menu) always creates a brand-new project -- it never
+  overwrites an existing one -- extracts the ZIP's files into that
+  project's folder, and, when a manifest.json is present, recreates
+  every row it describes with fresh ids, relinking clips to the newly
+  created media assets/text by the same path/content_id the manifest
+  used. A ZIP with no manifest (an older export, or just someone's own
+  ZIP of files) still imports -- as files only, with a plain message
+  that no Timeline/text could be restored -- rather than being rejected,
+  and a corrupted or non-ZIP upload gets a clear error instead of a
+  crash.
+  Verified for real, not just unit-tested: built an actual project on
+  disk with a real copied image file and a real copied audio file (SHA-
+  256 hashed, like a normal upload), a saved lyric with a revision and
+  an ownership record, and a Timeline track with one clip pointing at
+  the image and one pointing at the lyric -- then ran it through the
+  real build_project_manifest() -> _zip_project() -> import_project_zip()
+  path end to end (using the same fake-ORM-shim technique as other pure-
+  logic tests this session, since Flask/SQLAlchemy can't be installed
+  here). Confirmed after import: both files exist at their new location
+  with matching SHA-256 hashes, the lyric's text and content_id came
+  back verbatim, and both clips on the recreated track pointed at the
+  correct newly-created media asset and text content by name -- not just
+  that rows existed, but that the actual relationships survived the
+  round trip. Also separately confirmed the no-manifest fallback (a
+  plain ZIP with one text file imports as files only, no crash) and the
+  corrupt-file rejection (a non-ZIP file upload raises a plain, catchable
+  error rather than a stack trace).
+- Optional invisible/forensic watermarking is now built, as an opt-in
+  extra layer on top of the always-on visible watermark (never a
+  replacement for it). A new "Add invisible/forensic watermark
+  (experimental)" checkbox sits in Export Settings, and a separate
+  "Verify Invisible Watermark" tool (upload any image/video, see what's
+  hidden in it) sits below the export form in the Media Library tab.
+  Two different, honestly-labeled techniques are used, since this app
+  only has Pillow/ffmpeg to work with -- no dedicated audio/video
+  watermarking library:
+    - Images: real steganography. A short JSON payload (owner, project
+      name, content hash) is hidden in the least-significant bit of
+      every RGB value -- invisible to the eye, and recoverable later.
+      Its real, disclosed limitation: it only survives a losslessly-
+      saved PNG. Resizing, recompressing, or saving as JPEG destroys it
+      completely, so it's only offered when the export format is PNG
+      (any other format is rejected up front with a plain explanation,
+      not a silent no-op).
+    - Video: an ffmpeg metadata tag (a stream copy, no re-encoding, so
+      quality is untouched) -- NOT steganography, and NOT resistant to
+      tampering. Deleting metadata, converting formats, or many editing
+      tools strip it in one step. This is disclosed in the UI as a
+      basic, easy marker for casual reuse, not a forensic-grade one --
+      genuine audio/video forensic watermarking needs specialized DSP
+      (e.g. spread-spectrum embedding in the signal itself), which is
+      beyond what an ffmpeg-only pipeline can honestly claim to do.
+  A real integration bug was caught and fixed while testing this against
+  actual generated video files: MP4/MOV's muxer silently drops any
+  metadata key it doesn't already recognize unless told to keep custom
+  ones -- the watermark tag was writing successfully by ffmpeg's exit
+  code but never actually landing in the file. Fixed by adding
+  `-movflags use_metadata_tags` for MP4/MOV outputs specifically (WebM/
+  Matroska already keeps custom tags with no extra flag). Also confirmed
+  a plain WAV file's container has no format-level tag storage at all --
+  so this only applies to video exports (MP4/WebM), not raw audio files.
+  Verified for real: embedded and extracted the payload from an actual
+  generated PNG (payload matched exactly), confirmed a plain unmarked
+  image correctly returns "not found," confirmed resizing and a JPEG
+  round-trip both destroy it exactly as documented, and visually
+  inspected the marked PNG to confirm it's pixel-indistinguishable from
+  the original. For video, embedded and extracted the payload from both
+  a real generated MP4 and a real generated WebM (both matched exactly
+  after the MP4 muxer fix above), confirmed an untagged file correctly
+  returns "not found," and ran the full combined pipeline (visible
+  watermark applied first, then the invisible layer on top, on both an
+  image and a video) end to end to confirm the two layers coexist
+  correctly -- not tested in isolation only.
+- The optional Android WebView wrapper (spec's home-screen-icon goal) is
+  now scaffolded under android-wrapper/ -- a complete, standalone Gradle
+  project (its own gradlew/gradlew.bat and a real gradle-wrapper.jar
+  fetched from the official Gradle repo on GitHub and verified to be a
+  genuine jar, not a stub) that loads this web app full-screen in a
+  WebView, with your mandala icon already generated at every required
+  density (48/72/96/144/192px from static/icons/music.png). It is a
+  wrapper only -- it doesn't reimplement anything, it just displays the
+  same pages your server already serves, so it needs a real, reachable
+  server address (not "localhost") set in one clearly-marked line of
+  MainActivity.kt before building. Handles what a plain WebView doesn't
+  do automatically: watermarked exports and project ZIP downloads are
+  handed to Android's own Download Manager so they actually save to the
+  Downloads folder; file <input> fields (uploads, studio logo) open the
+  normal Android file picker; the microphone permission prompt appears
+  for the in-app recorder; and the back button/gesture steps back through
+  the app's own pages instead of closing it.
+  Full honesty on testing here: this could NOT be compiled in this
+  sandbox -- there is no Android SDK, and installing one (or even a
+  Kotlin compiler via apt) is blocked by the same network policy that
+  blocks pypi.org, confirmed by directly trying `apt-get install kotlin`
+  and getting the identical 403 pattern. What WAS verified for real: the
+  gradle-wrapper.jar was fetched from the actual Gradle project's GitHub
+  repository (not hand-written) and confirmed to be a genuine zip/jar
+  archive; every XML resource file (AndroidManifest.xml, strings.xml,
+  themes.xml) was run through a real XML parser and a real bug was caught
+  and fixed this way -- two `<!-- comments -->` contained a bare "--",
+  which is illegal inside an XML comment and would have failed the build;
+  both are fixed and all three files now parse cleanly. The Kotlin code
+  itself follows standard, well-established WebView/DownloadManager/file-
+  chooser patterns, but has not been proven to compile -- build it in
+  Android Studio or Code On The Go and fix anything flagged there before
+  relying on it, exactly as README_ANDROID_WRAPPER.txt says up front.
+- Timeline in-progress-draft safety net (spec §17-adjacent, was FUTURE
+  FEATURES item 3): every Timeline action that already exists (renaming,
+  moving, resizing, effects, mute/lock/hide flags) commits to the server
+  immediately, so those never had anything to lose. The one real gap was
+  the still-unsubmitted "Add Track" and "Add clip" fields -- typed but
+  not yet clicked -- which were lost both on a crash/reload AND, less
+  obviously, just by finishing an action elsewhere on the page, since
+  loadTimeline() rebuilds the entire tracks-container from the server's
+  data on every action and wipes any other track's in-progress "Add
+  clip" form as a side effect. Added the same browser-local-storage
+  draft pattern already used for the text editor: the "Add Track" name/
+  type is saved to localStorage 800ms after typing stops and restored on
+  load with a "Restored a track name..." notice; each track's own "Add
+  clip" fields (label, media choice, start, duration) get their own
+  draft keyed by that track's id, so drafts for different tracks can't
+  clobber each other and a draft survives loadTimeline() re-rendering
+  the same track. Drafts are cleared the moment the matching Add
+  Track/Add Clip actually succeeds, or when the track itself is deleted.
+  Tested with a standalone Node script exercising the exact same helper
+  functions (not a UI click-through, since this sandbox still has no
+  way to run a real browser against the Flask app): confirmed a draft
+  round-trips exactly, survives a simulated reload, two different
+  tracks' drafts stay independent and clearing one doesn't touch the
+  other, and corrupted localStorage content or a storage write failure
+  (private browsing/quota) is swallowed instead of crashing the Timeline
+  render -- same safety guarantees as the existing text draft.
+
+KNOWN ISSUES / LIMITATIONS
+----------------------------
+- The music.png icon is now in place at static/icons/music.png (the
+  mandala/sunburst artwork you provided, with the "Made with AI" corner
+  badge cropped off and re-squared to 1024x1024) and appears as both
+  the header icon and the browser tab favicon; a matching favicon.ico
+  (16/32/48/64px) was generated from it for older browsers that don't
+  support PNG favicons.
+- Video watermarking requires ffmpeg to be installed on the host. If
+  it's missing, video export returns a clear 503 error rather than
+  silently shipping an unwatermarked file.
+- AI Music/Voice/Image/Animation need a real provider account and API
+  key to do anything beyond reporting "not connected" — none is
+  wired to a specific vendor by default, since that's a paid-service
+  and account decision for the project owner to make.
+- No automated test suite (pytest etc.) yet. This build sandbox could
+  not reach pypi.org (blocked with a 403 at the network level), so
+  Flask/SQLAlchemy/etc. could not be pip-installed or run end-to-end
+  here. Every file compiles cleanly, and the logic that doesn't need
+  those packages (text hashing/ownership export/verification, image
+  watermarking with Pillow, clip-splitting math, folder-naming/ZIP
+  export) was directly unit-tested and confirmed correct. The Flask
+  routes themselves (auth, projects, media, timeline, text, export)
+  have NOT been run end-to-end — install requirements.txt on a machine
+  with normal internet access (your own machine or Render) and smoke
+  test before relying on this in production.
+- The scheduled-task approach for unattended continued development
+  was tried and turned off: each scheduled firing starts a completely
+  separate session with no access to this conversation or (once this
+  sandbox's environment cycles) reliably to these files either, so
+  progress reports were landing in sessions the user never saw. If
+  unattended continuation is wanted again later, it needs the code
+  living somewhere durable first (pushed to GitHub) so a fresh session
+  can always `git clone` it rather than depending on this ephemeral
+  sandbox still being warm.
+- Undo/redo (spec §17) covers the Timeline's committed changes; the
+  separate in-progress-draft safety net for Timeline's still-unsubmitted
+  "Add Track"/"Add clip" fields is now also built — see DEVELOPMENT
+  DECISIONS above for exactly what is and isn't covered.
+FUTURE FEATURES (priority order for continued work)
+------------------------------------------------------------------
+1. Wire a real AI music-generation provider once one is chosen.
+2. Wire ElevenLabs (or similar) for AI Voice (speed/age/emotion
+   controls), matching the earlier voice-cloning discussion from the
+   DIY Animation and Audio project.
+3. Optional: paid items in the Downloadable Asset & Template Library
+   once a payment provider account/API key is chosen and provided (see
+   DEVELOPMENT DECISIONS — the model and an honest "not connected"
+   response already exist; free items work today).
+
+Spec §5 (Audio and Voice) is fully covered. Spec §7 (Video Creator) is
+fully covered: trim, crop, rotate, fade, captions, playback, and
+cross-clip crossfade transitions are all built and tested against real
+video/audio. Phase 5 (Collaboration) is fully covered: invite/permission-
+tier/revoke now has a UI, not just an API. Spec §17 (Auto-save/undo) is
+fully covered: Timeline undo/redo, a text-editor crash-recovery draft,
+and a matching draft safety net for Timeline's own still-unsubmitted
+"Add Track"/"Add clip" fields are all built (see DEVELOPMENT DECISIONS).
+Spec §18 (Export settings) is fully
+covered: resolution, frame rate, video/audio quality, and file format
+are all selectable on export, alongside the always-on watermark. Spec
+§14 (AI Project Memory) is fully covered: every AI Assistant call now
+automatically includes the project's current state as context. Spec
+§23 (Downloadable Asset & Template Library) is covered for free items:
+originally-generated project templates and placeholder media assets can
+be browsed and pulled into any project; paid items are modeled but
+honestly report that purchasing isn't connected yet, since no payment
+provider has been chosen. Spec §12 (Backup/Export/Import) is fully
+covered: export/backup ZIPs now carry a full manifest of the project's
+database rows alongside its files, and importing one restores a working
+project (media, text, and Timeline included), not just a folder of files.
+Optional invisible/forensic watermarking is covered honestly: real LSB
+steganography for images (PNG-only, fragile by nature), and a metadata
+tag for video (easy but not tamper-resistant) — both clearly labeled in
+the UI as an addition to, never a replacement for, the always-on visible
+watermark. The optional Android WebView wrapper is scaffolded (a complete
+Gradle project under android-wrapper/, with a genuine gradle-wrapper.jar
+and your icon at every density) but not build-verified — see DEVELOPMENT
+DECISIONS and android-wrapper/README_ANDROID_WRAPPER.txt.
+
+WHEN CONTINUING THIS PROJECT: work down the list above in order,
+verify each new capability against real input where possible (the way
+audio_editor.py was tested against an actual generated audio file, not
+just unit-tested logic), update this file and the other docs honestly
+after each change, and if a feature needs an API key or paid account
+the user hasn't provided, stop that one item, note exactly what's
+needed and where to get it, and move on to the next item rather than
+blocking all progress on it. NOTE: unattended scheduled continuation
+was tried and turned off (see KNOWN ISSUES) — for now this list is
+worked through in live sessions with the user present.

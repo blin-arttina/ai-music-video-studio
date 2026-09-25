@@ -1,0 +1,255 @@
+AI-ASSISTED MUSIC STUDIO AND VIDEO GENERATOR — USER GUIDE
+============================================================
+
+1. SIGNING IN
+--------------
+This app does not have its own separate password. Sign in with your
+Blind Art Server account (the same account used by other Blind Art
+apps). If you don't have one yet, create it from any connected Blind
+Art app first.
+
+2. MAIN MENU
+------------
+After signing in you'll see:
+  - New Project — name it, add an optional description, and it's created.
+  - Import Project (ZIP) — choose a ZIP file previously downloaded from
+    "Export Complete Project" (in a project's Project tab) and it opens
+    as a brand-new project with its media, saved text, and Timeline
+    restored. It never overwrites an existing project. A plain ZIP with
+    no export information inside it still imports, but only as files,
+    with no Timeline or saved text to restore.
+  - Recent Projects — a list of everything you've started, with its
+    status (Active, Planned, Completed, Discontinued) and whether it's
+    private.
+
+3. INSIDE A PROJECT
+--------------------
+Each project has these tabs:
+
+  MUSIC & TEXT STUDIO
+    Write and save lyrics, notes, scripts, poems, captions, dialogue,
+    or narration. Choose a type, give it a title, write the content,
+    and choose whether to keep it private (recommended) or make it
+    shareable. Every time you save:
+      - it is hashed (a fingerprint of the exact text),
+      - timestamped,
+      - given a version number,
+      - and recorded in a permanent ownership record that is never
+        overwritten — editing text again just adds a new version.
+    Click "View ownership record" on any item to see its full history.
+    Click "Export with ownership block" to download a .txt file with
+    your ownership information and a copyright notice appended.
+
+    While you're typing a new item (before you click Save), your title
+    and content are automatically kept as a draft in this browser. If
+    the tab closes, the browser crashes, or you reload the page before
+    saving, reopening the project restores that draft with a notice and
+    a "Discard Draft" button, so unsaved writing is never silently
+    lost. The draft only lives in this browser (it won't follow you to
+    another device) and disappears the moment you actually save.
+
+  MEDIA LIBRARY
+    Upload images, audio, music, video, voice recordings, animation
+    files, or fonts. Organize by category. Delete anything you no
+    longer need. Every audio, video, or image file shows a player (or
+    picture) right in the list so you can listen to, watch, or view it
+    without downloading it first.
+
+    To record directly instead of uploading a file: choose what to
+    save the recording as (Voice, Music, or Audio), click "Start
+    Recording," allow microphone access if your browser asks, and
+    click "Stop Recording" when you're done. A live status line shows
+    the recording time as it goes. The recording uploads to your Media
+    Library automatically as soon as you stop — no separate save step.
+
+    To export an image or video with the required watermark:
+      1. Upload it first (above).
+      2. Scroll to "Export With Watermark."
+      3. Pick the file, choose Image or Video, type your watermark
+         text (your name or project name works well), choose a
+         position (corner, center, or tiled), and adjust opacity if
+         you like — it's kept between 25% and 85% so it can never be
+         made invisible or so heavy it ruins the image.
+         If you've saved a studio name in Settings (see below), you can
+         leave the watermark text blank and it's used automatically —
+         typing something here just overrides it for this one export.
+         If you've saved a studio logo, an "Include my studio logo"
+         checkbox appears here, checked by default, so it appears right
+         alongside your watermark text without any extra steps.
+      4. Open "Export settings" to choose:
+           - Resolution: keep the source size, or shrink to 1080p,
+             720p, or 480p (never enlarged past its original size).
+           - Frame rate (video only): keep the source's frame rate, or
+             set it to 24, 30, or 60 fps.
+           - Video quality (video only): High for the cleanest result
+             and largest file, Low for the smallest file.
+           - Audio quality (video only): 128 to 320 kbps.
+           - File format: PNG or JPG for images; MP4 (plays almost
+             anywhere) or WebM (smaller, web-friendly) for video.
+           - "Add invisible/forensic watermark (experimental)": an
+             optional, extra ownership marker hidden alongside the
+             visible one. For an image, this only works with PNG format
+             — it's a real hidden marker in the pixels, but resizing the
+             image or saving it as JPG destroys it completely. For
+             video, it's an easy metadata tag rather than something
+             hidden in the picture or sound itself, so it's not
+             resistant to tampering — converting the file or running it
+             through many editing tools will strip it. Turn this on only
+             as an extra, not as your main protection.
+         Leave these as they are if you just want the same size and
+         format as the original — the visible watermark is applied
+         either way.
+      5. Click "Export with Watermark" to download the protected file.
+
+    IMPORTANT: A watermark discourages someone from claiming your work
+    as their own, but it cannot make copying technically impossible.
+    See CONTENT_PROTECTION_GUIDE.txt for the full explanation.
+
+    "Verify Invisible Watermark," below the export form, lets you upload
+    any image or video (yours or one you found elsewhere) to check
+    whether it carries an invisible watermark this app embedded, and see
+    what it says.
+
+  LIBRARY
+    Free, ready-to-use starter content you can pull straight into this
+    project, with no account or payment needed:
+      - Project Templates: click "Add Tracks to This Project" on one
+        (e.g. "Song with Vocals + Instrumental," "Narrated Video,"
+        "Two-Voice Podcast") to instantly add that set of empty tracks
+        to your Timeline, ready for you to add your own clips to.
+      - Media Assets: a few short original tones/chimes and gradient
+        background images. Click "Add to Media Library" to copy one
+        into this project's Media Library, exactly as if you'd uploaded
+        it yourself.
+    Everything here is either free, original content made by this app
+    (not third-party stock), or listed as paid. Paid items are shown
+    honestly as "purchasing not connected" — nothing paid is ever
+    unlocked for free, and there's no fake checkout.
+
+  TIMELINE
+    "Undo" and "Redo" buttons at the top of this tab cover changes to
+    tracks and clips — adding, moving, resizing, trimming, splitting,
+    or deleting a clip; creating, renaming, or deleting a track; muting
+    or locking either one. They're greyed out when there's nothing to
+    undo or redo. (Saved lyrics/text have their own separate version
+    history in the Music & Text Studio tab instead of Undo/Redo.)
+
+    While you're filling in "Add Track" or a track's "Add clip" fields
+    (before clicking the button), that in-progress typing is kept as a
+    draft in this browser too, the same way unsaved lyrics/notes are.
+    If the page reloads, or you finish adding something else on the
+    Timeline first, reopening or returning to the form restores what
+    you'd started typing there instead of losing it. Like the text
+    draft, this only lives in this browser and disappears the moment
+    you actually click Add Track / Add Clip.
+
+    Build a multi-track arrangement: add a track (Music, Vocals,
+    Dialogue, Sound Effects, Images, Video, Animation, Text, Lyrics, or
+    AI-Generated), then add clips to it. Each clip is placed and
+    trimmed using exact number fields — start time, duration, volume,
+    fades — rather than dragging a block around, so every value is
+    readable and adjustable with a screen reader. You can:
+      - Mute, lock, or hide an entire track.
+      - Move a clip by changing its start time.
+      - Resize a clip by changing its duration.
+      - Split a clip in two at its midpoint.
+      - Mute, lock, or delete an individual clip.
+    For an audio, music, or voice clip, open "Audio effects" under the
+    clip to adjust bass/mid/treble EQ, reverb, echo, compression, noise
+    reduction, and pitch shift (in semitones), then click "Render Audio
+    with These Settings" to actually process the real file with your
+    trim, fades, volume, and effects applied — a player appears right
+    there so you can listen to the result immediately, and it downloads
+    at the same time.
+    For a video or animation clip, open "Video effects" under the clip
+    to crop (as a fraction of the frame, from the left/top plus a
+    width/height), rotate (90/180/270 degrees), add a text caption
+    (choosing top, center, or bottom), and set fade in/out — then click
+    "Render Video with These Settings" to process the real file — a
+    preview player appears right there so you can watch the result, and
+    it downloads at the same time. This is a separate step from
+    watermarking: edit here first, then use "Export With Watermark" in
+    the Media Library on the finished result before you share it.
+
+    To smoothly blend one clip into the next instead of a hard cut,
+    open "Crossfade into the next clip on this track" under a clip.
+    This works on whichever clip starts right after it on the same
+    track, as long as both clips have a media file attached and both
+    are the same kind of media (both audio-like, or both video-like).
+    Set how long the transition should last (in seconds) and, for
+    video, pick a transition style (fade, dissolve, or a wipe/slide
+    direction), then click "Crossfade with Next Clip." Each clip's own
+    trim and effects are applied first, then the two results are
+    blended together — a preview player appears with the result, and
+    it downloads at the same time.
+
+  AI ASSISTANT
+    - Ask a question: get help with the app or your project.
+    - Draft Lyrics / Draft Video Plan: describe an idea, get a
+      starting draft you can edit freely. The AI never finalizes
+      anything on your behalf.
+    - AI Music / AI Voice buttons show whether a generation provider
+      is connected on the server. If none is connected yet, you'll see
+      a plain message saying so — never a fake result.
+    - Every question or draft automatically includes a short summary of
+      THIS project — how many tracks and clips you have, your media
+      counts, your saved studio name, and the titles (not the content)
+      of your saved lyrics/notes/scripts — so you don't have to
+      re-explain your project every time. Your saved text itself always
+      stays private; only its title and type are ever included.
+
+  PROJECT
+    - Create Backup (ZIP): saves a timestamped backup inside the
+      project's own backups folder.
+    - Export Complete Project (ZIP): downloads everything in the
+      project as one archive, including its media, saved text, and
+      Timeline — not just the files — so it can be fully restored later
+      with Import Project (ZIP) on the Main Menu, on this account or a
+      different one.
+    - Duplicate Project: makes a full copy under a new name.
+    - Rename Project.
+    - Collaborators (only you, the owner, see this): invite someone by
+      the email address of their own Blind Art Server account and pick
+      what they can do — View, Comment, Edit, or Full access (everything
+      except deleting the project or managing collaborators themselves).
+      Change anyone's permission at any time from the dropdown next to
+      their name, and use "Revoke Access" / "Restore Access" to turn
+      their access off and back on without having to re-invite them.
+    - Audit Log: a running record of what happened in this project
+      (only the owner can see this).
+    - Delete Project Permanently: cannot be undone.
+
+  SETTINGS
+    - Toggle whether the project is private.
+    - A reminder that content protection (watermarking + text
+      ownership records) is always on and cannot be turned off.
+    - Studio Branding: save your studio or label name and upload a logo
+      image (a PNG with a transparent background looks best) — this is
+      saved to your account, not just this project, so it automatically
+      becomes your default watermark on every project you have, current
+      and future. Click "Save Studio Branding" to update either one (a
+      preview shows your currently saved logo, if any), or "Remove Logo
+      Only" to take the logo off without losing your saved studio name.
+
+4. ACCESSIBILITY
+-----------------
+This app uses a dark background with large, high-contrast white text,
+large buttons, and descriptive labels rather than icon-only controls.
+Every control is reachable and operable by keyboard, and a "Skip to
+main content" link is available at the very top of every page for
+screen-reader and keyboard users.
+
+5. SHARING
+-----------
+Exported files (watermarked images/video, exported text, project ZIPs)
+download to your device like any other file, ready to share however
+you choose. Protected source text and project files are never shared
+automatically — only what you export.
+
+6. USING THIS AS A HOME-SCREEN ANDROID APP (OPTIONAL)
+-------------------------------------------------------
+This app works fine as a regular website in any browser. If you'd
+rather have it on your home screen with its own icon like a normal app,
+see the android-wrapper folder in the project files and its
+README_ANDROID_WRAPPER.txt for step-by-step instructions. It's optional
+and doesn't change anything about how the app itself works.
