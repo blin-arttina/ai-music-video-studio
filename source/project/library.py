@@ -14,11 +14,9 @@ Every seeded item here is either:
     with ffmpeg (simple tones/chimes) or Pillow (gradient backgrounds) --
     never third-party stock. See seed_library() / _generate_placeholder_*.
 
-Paid items are supported in the data model (is_free, price_usd) but this
-app has no payment provider connected. Rather than fake an unlock, paid
-items are reported the same honest way an unconnected AI provider is
-reported elsewhere in this app: a plain "purchasing isn't connected yet"
-message, never free access and never a fabricated charge.
+Everything in the Library is free. This app has no payment provider and
+was never meant to need one -- the only account/key this project needs
+from its owner is an AI provider key for AI Music/Voice generation.
 """
 
 import json
@@ -33,11 +31,6 @@ from source.project.models import db, LibraryItem, MediaAsset, Track
 CONFIG = get_config()
 
 LIBRARY_ASSETS_DIR = BASE_DIR / "assets" / "library"
-
-
-class PurchaseNotConnectedError(Exception):
-    """Raised when a paid library item is requested but no payment
-    provider is connected. The item is never granted for free."""
 
 
 def list_library_items():
@@ -58,11 +51,6 @@ def get_library_item(item_id):
 def apply_project_template(item: LibraryItem, project) -> list:
     if item.kind != "project_template":
         raise ValueError("this library item is not a project template")
-    if not item.is_free:
-        raise PurchaseNotConnectedError(
-            "Purchasing isn't connected yet, so paid templates can't be applied. "
-            "This template needs a payment provider account/API key to be set up first."
-        )
     data = json.loads(item.template_data_json or "[]")
     existing_max = db.session.query(db.func.max(Track.order_index)).filter_by(
         project_id=project.id
@@ -88,11 +76,6 @@ def apply_project_template(item: LibraryItem, project) -> list:
 def copy_media_asset_to_project(item: LibraryItem, project) -> MediaAsset:
     if item.kind != "media_asset":
         raise ValueError("this library item is not a media asset")
-    if not item.is_free:
-        raise PurchaseNotConnectedError(
-            "Purchasing isn't connected yet, so paid assets can't be imported. "
-            "This asset needs a payment provider account/API key to be set up first."
-        )
     src = Path(item.file_path)
     if not src.exists():
         raise FileNotFoundError(f"library asset file is missing on the server: {src}")
@@ -218,8 +201,6 @@ def seed_library():
             category=spec["category"],
             title=spec["title"],
             description=spec["description"],
-            is_free=True,
-            price_usd=None,
             template_data_json=json.dumps(spec["tracks"]),
         )
         db.session.add(item)
@@ -239,8 +220,6 @@ def seed_library():
                 title=tone["title"],
                 description=f"A short, originally-generated {tone['freq']} Hz tone you can use "
                              "as a placeholder sound effect or chime.",
-                is_free=True,
-                price_usd=None,
                 file_path=str(dest),
                 file_category="audio",
             )
@@ -261,8 +240,6 @@ def seed_library():
                 title=grad["title"],
                 description="An originally-generated gradient background image, "
                              "ready to use behind titles, lyrics, or captions.",
-                is_free=True,
-                price_usd=None,
                 file_path=str(dest),
                 file_category="image",
             )

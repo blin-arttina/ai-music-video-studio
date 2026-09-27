@@ -66,10 +66,17 @@ class Config:
 
     # --- AI module integrations (all optional; unset = "not connected") ---
     AI_MUSIC_PROVIDER_API_KEY = os.environ.get("AI_MUSIC_PROVIDER_API_KEY")
-    AI_VOICE_PROVIDER_API_KEY = os.environ.get("AI_VOICE_PROVIDER_API_KEY")  # e.g. ElevenLabs
     AI_IMAGE_PROVIDER_API_KEY = os.environ.get("AI_IMAGE_PROVIDER_API_KEY")
     AI_VIDEO_PROVIDER_API_KEY = os.environ.get("AI_VIDEO_PROVIDER_API_KEY")
     AI_TEXT_PROVIDER_API_KEY = os.environ.get("AI_TEXT_PROVIDER_API_KEY")  # lyrics/scripts/assistant
+
+    # --- AI Voice: self-hosted Chatterbox (resemble-ai/chatterbox), not a
+    # paid API -- no account or key needed, just the chatterbox-tts package
+    # (and PyTorch) installed on whatever server actually runs this app.
+    # See source/ai/modules.py generate_voice() and PROJECT_NOTES.txt for
+    # install/setup instructions. ---
+    CHATTERBOX_DEVICE = os.environ.get("CHATTERBOX_DEVICE", "cpu")  # "cpu" or "cuda"
+    CHATTERBOX_NANO = os.environ.get("CHATTERBOX_NANO", "true").strip().lower() != "false"
 
 
 class DevelopmentConfig(Config):

@@ -32,9 +32,10 @@ git push -u origin main
      production instead of the default SQLite file, which won't
      persist across deploys on Render's free tier)
    - `ANTHROPIC_API_KEY` — optional, enables AI Lyrics/Script/Help
-   - Any of `AI_MUSIC_PROVIDER_API_KEY`, `AI_VOICE_PROVIDER_API_KEY`,
-     `AI_IMAGE_PROVIDER_API_KEY`, `AI_VIDEO_PROVIDER_API_KEY` — optional,
-     only if/when you connect a generation provider
+   - Any of `AI_MUSIC_PROVIDER_API_KEY`, `AI_IMAGE_PROVIDER_API_KEY`,
+     `AI_VIDEO_PROVIDER_API_KEY` — optional, only if/when you connect a
+     generation provider for that module
+   - AI Voice needs no key at all — see "AI Voice (Chatterbox)" below
 
 ## 3. ffmpeg for video watermarking
 
@@ -49,6 +50,37 @@ Two options:
 Until ffmpeg is available, image watermarking works normally; video
 export will return a clear "ffmpeg is not installed" error instead of
 silently skipping the watermark.
+
+## 3b. AI Voice (Chatterbox)
+
+AI Voice generates real speech using Chatterbox (resemble-ai/chatterbox),
+a free, open-source, self-hosted voice model — not a paid API, so there's
+no account or key to add. To turn it on:
+
+```
+pip install -r requirements-voice.txt
+```
+
+This is a large, separate install (it pulls in PyTorch, several GB) —
+that's why it's not in the main `requirements.txt`. Until it's installed,
+AI Voice reports "not connected," exactly like the other AI modules do
+without a key; everything else in this app works fine without it.
+
+By default this runs on CPU using Chatterbox's smaller "Nano" model,
+which Resemble AI documents as running about 3x faster than real-time on
+8 CPU cores — no GPU needed. If your Render plan (or other host) has an
+NVIDIA GPU available, set these environment variables for faster,
+higher-quality generation:
+- `CHATTERBOX_DEVICE=cuda`
+- `CHATTERBOX_NANO=false` (uses the larger Turbo model instead of Nano)
+
+The first AI Voice generation after install will also download the
+model's weights, so it will be slower than every generation after that.
+
+This integration has been unit-tested against a stand-in for the real
+package (see PROJECT_NOTES.txt) but not run with the actual model, since
+the environment that built this app couldn't install PyTorch. After
+installing it here, generate a short test phrase before relying on it.
 
 ## 4. Persistent storage
 

@@ -213,7 +213,7 @@
 
 <section id="panel-library" class="tabpanel" role="tabpanel" aria-labelledby="tab-library" hidden>
   <h3>Downloadable Asset &amp; Template Library</h3>
-  <p class="hint">Free, originally-generated starter content you can pull straight into this project: project templates (a ready-made set of tracks) and small placeholder media (tones/chimes, gradient backgrounds). Paid items are shown honestly as not available yet, since no payment provider is connected — nothing paid is ever unlocked for free.</p>
+  <p class="hint">Free, originally-generated starter content you can pull straight into this project: project templates (a ready-made set of tracks) and small placeholder media (tones/chimes, gradient backgrounds). No account or payment needed — everything in this Library is free.</p>
 
   <div id="library-templates-container">
     <h4>Project Templates</h4>
@@ -296,11 +296,31 @@
   </div>
 
   <div class="card">
-    <h4>AI Music / Voice / Image / Animation</h4>
+    <h4>AI Music / Image / Animation</h4>
     <p class="hint">These modules generate through an external provider. Until one is connected on the server, requests here will report "not connected" rather than fake a result.</p>
     <button class="btn secondary" id="ai-music-btn" type="button">Try AI Music</button>
-    <button class="btn secondary" id="ai-voice-btn" type="button">Try AI Voice</button>
     <p id="ai-provider-result" class="hint" role="status"></p>
+  </div>
+
+  <div class="card">
+    <h4>AI Voice</h4>
+    <p class="hint">Generates real speech using Chatterbox, a free, self-hosted voice model — no account or per-use cost. Pick a voice recording already in this project's Media Library to clone that voice, or leave it blank to use the model's own default voice. If this says "not connected," the server this app is running on doesn't have Chatterbox installed yet — see PROJECT_NOTES.txt for the one-line setup.</p>
+    <div class="field">
+      <label for="ai-voice-text">Text to speak</label>
+      <textarea id="ai-voice-text" rows="3"></textarea>
+    </div>
+    <div class="field">
+      <label for="ai-voice-reference">Voice to clone (optional)</label>
+      <select id="ai-voice-reference"><option value="">None (use the default voice)</option></select>
+    </div>
+    <details>
+      <summary>Advanced (optional)</summary>
+      <div class="field"><label for="ai-voice-exaggeration">Exaggeration (0-1)</label><input id="ai-voice-exaggeration" type="number" min="0" max="1" step="0.1" value="0.5"></div>
+      <div class="field"><label for="ai-voice-cfg">Cfg weight (0-1)</label><input id="ai-voice-cfg" type="number" min="0" max="1" step="0.1" value="0.5"></div>
+    </details>
+    <button class="btn" id="ai-voice-btn" type="button">Generate Voice</button>
+    <p id="ai-voice-status" class="hint" role="status"></p>
+    <audio id="ai-voice-player" controls style="display:none; width:100%; margin-top:8px;"></audio>
   </div>
 </section>
 

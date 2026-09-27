@@ -339,10 +339,10 @@ class LibraryItem(db.Model):
     project -- either a ready-made project TEMPLATE (a starter set of
     tracks, described as data, applied by creating real Track rows) or a
     MEDIA ASSET (an actual bundled file copied into a project's Media
-    Library). Each item is either free or paid; paid items are recorded
-    honestly even though no payment provider is connected yet (see
-    source/project/library.py), matching how an unconnected AI provider
-    is reported elsewhere in this app rather than being silently unlocked.
+    Library). Everything here is free -- this app has no payment provider
+    and isn't meant to (the only account/key this project ever needed from
+    the owner is an AI provider key for AI Music/Voice); there is no paid
+    tier to unlock or report as unavailable.
     """
     __tablename__ = "library_items"
 
@@ -351,8 +351,6 @@ class LibraryItem(db.Model):
     category = db.Column(db.String(30), default="")  # e.g. music, image, video, song, video_project
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default="")
-    is_free = db.Column(db.Boolean, default=True)
-    price_usd = db.Column(db.Float, nullable=True)  # only meaningful when is_free is False
     file_path = db.Column(db.String(600), nullable=True)      # media_asset items: bundled source file
     file_category = db.Column(db.String(30), nullable=True)   # media_asset items: MediaAsset category to import as
     template_data_json = db.Column(db.Text, nullable=True)    # project_template items: tracks/clips to create
@@ -365,8 +363,6 @@ class LibraryItem(db.Model):
             "category": self.category,
             "title": self.title,
             "description": self.description,
-            "is_free": self.is_free,
-            "price_usd": self.price_usd,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

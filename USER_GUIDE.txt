@@ -121,10 +121,8 @@ Each project has these tabs:
         background images. Click "Add to Media Library" to copy one
         into this project's Media Library, exactly as if you'd uploaded
         it yourself.
-    Everything here is either free, original content made by this app
-    (not third-party stock), or listed as paid. Paid items are shown
-    honestly as "purchasing not connected" — nothing paid is ever
-    unlocked for free, and there's no fake checkout.
+    Everything here is free, original content made by this app itself —
+    not third-party stock, and no payment or purchase of any kind.
 
   TIMELINE
     "Undo" and "Redo" buttons at the top of this tab cover changes to
@@ -188,9 +186,21 @@ Each project has these tabs:
     - Draft Lyrics / Draft Video Plan: describe an idea, get a
       starting draft you can edit freely. The AI never finalizes
       anything on your behalf.
-    - AI Music / AI Voice buttons show whether a generation provider
-      is connected on the server. If none is connected yet, you'll see
-      a plain message saying so — never a fake result.
+    - AI Music shows whether a generation provider is connected on the
+      server. If none is connected yet, you'll see a plain message
+      saying so — never a fake result.
+    - AI Voice generates real speech using Chatterbox, a free,
+      self-hosted voice model — no ElevenLabs account, no key, no
+      per-use cost. Type what you want spoken, and optionally pick one
+      of your own voice recordings from this project's Media Library
+      to clone that voice; leave it blank to use the model's own
+      default voice instead. The result is saved straight into your
+      Media Library, ready to use on the Timeline like any other
+      recording. If this says "not connected," it means the server
+      running this app doesn't have Chatterbox installed yet — that's
+      a one-time setup step for whoever manages the server
+      (`pip install -r requirements-voice.txt`), not something you can
+      fix from inside the app.
     - Every question or draft automatically includes a short summary of
       THIS project — how many tracks and clips you have, your media
       counts, your saved studio name, and the titles (not the content)

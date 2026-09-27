@@ -13,9 +13,22 @@ Lyrics/script/help text assistance can run today using the same Claude
 API key this workspace already uses for such tasks, if ANTHROPIC_API_KEY
 is set in the environment — that module is the one exception with a
 working default implementation.
+
+AI Voice is a second working implementation, but a self-hosted one: it
+uses Chatterbox (resemble-ai/chatterbox, MIT-licensed, free) instead of a
+paid API. There is no account or key to configure -- the only
+requirement is that the `chatterbox-tts` package (and PyTorch) be
+installed on whatever server actually runs this app. This sandbox can't
+install those (no working pip/network access to fetch them, confirmed
+directly), so this module can be written and unit-tested against a stand-
+in for the real package, but not run end-to-end here -- see
+PROJECT_NOTES.txt for exactly what that means and how to finish setting
+it up on a real host.
 """
 
 import os
+import uuid
+from pathlib import Path
 
 from config import get_config
 
@@ -23,6 +36,33 @@ CONFIG = get_config()
 
 NOT_CONNECTED = "not_connected"
 OK = "ok"
+
+# Lazily-loaded Chatterbox model, kept in memory after the first
+# successful load so repeated AI Voice calls don't reload it (loading is
+# slow and, on first run, downloads the model weights).
+_CHATTERBOX_MODEL = None
+_CHATTERBOX_LOAD_ERROR = None
+
+
+def _get_chatterbox_model():
+    """Returns a loaded Chatterbox model, or None if the package isn't
+    installed / failed to load. Only ever attempts the load once per
+    process -- if it fails, later calls get the same cached failure
+    instead of retrying (and re-failing) every time."""
+    global _CHATTERBOX_MODEL, _CHATTERBOX_LOAD_ERROR
+    if _CHATTERBOX_MODEL is not None:
+        return _CHATTERBOX_MODEL
+    if _CHATTERBOX_LOAD_ERROR is not None:
+        return None
+    try:
+        from chatterbox.tts_turbo import ChatterboxTurboTTS
+        _CHATTERBOX_MODEL = ChatterboxTurboTTS.from_pretrained(
+            device=CONFIG.CHATTERBOX_DEVICE, nano=CONFIG.CHATTERBOX_NANO,
+        )
+        return _CHATTERBOX_MODEL
+    except Exception as exc:  # noqa: BLE001 -- package missing, bad device, etc.
+        _CHATTERBOX_LOAD_ERROR = str(exc)
+        return None
 
 
 def _not_connected(module: str, needs: str) -> dict:
@@ -124,14 +164,56 @@ def help_assistant(question: str, project_context: str = "") -> dict:
 
 
 # --------------------------------------------------------------------
-# AI Voice Module
+# AI Voice Module (self-hosted Chatterbox -- see module docstring)
 # --------------------------------------------------------------------
 
-def generate_voice(text: str, speed: float = 1.0, age: str = "adult", emotion: str = "neutral") -> dict:
-    if not CONFIG.AI_VOICE_PROVIDER_API_KEY:
-        return _not_connected("AI Voice", "AI_VOICE_PROVIDER_API_KEY (e.g. from ElevenLabs)")
-    # --- Wire a real provider here (e.g. ElevenLabs text-to-speech) ---
-    return _not_connected("AI Voice", "AI_VOICE_PROVIDER_API_KEY")
+def generate_voice(text: str, reference_audio_path: str = None,
+                    exaggeration: float = 0.5, cfg_weight: float = 0.5,
+                    out_dir: str = None) -> dict:
+    """Generates speech for `text`.
+
+    If `reference_audio_path` points to a real audio file (e.g. a voice
+    recording already in the project's Media Library), Chatterbox clones
+    that voice from it (about 10 seconds of clean speech is enough).
+    Without one, it falls back to the model's own built-in default voice
+    -- still real generation, just not a cloned voice.
+
+    Returns {"status": "ok", "audio_path": "<wav file written to out_dir>"}
+    on success, or a "not_connected"/"error" status dict otherwise -- the
+    same honest shape every other AI module in this app uses.
+    """
+    model = _get_chatterbox_model()
+    if model is None:
+        return _not_connected(
+            "AI Voice",
+            "the chatterbox-tts package (and PyTorch) on the server -- run "
+            "`pip install chatterbox-tts` where this app is hosted, then "
+            "restart it. No account or API key is needed, this runs "
+            f"locally. (Load attempt failed with: {_CHATTERBOX_LOAD_ERROR})"
+            if _CHATTERBOX_LOAD_ERROR else
+            "the chatterbox-tts package (and PyTorch) on the server -- run "
+            "`pip install chatterbox-tts` where this app is hosted, then "
+            "restart it. No account or API key is needed, this runs locally.",
+        )
+    if not text or not text.strip():
+        return {"status": "error", "message": "No text was given to speak."}
+    try:
+        import torchaudio as ta
+        kwargs = {"exaggeration": exaggeration, "cfg_weight": cfg_weight}
+        if reference_audio_path:
+            kwargs["audio_prompt_path"] = reference_audio_path
+        wav = model.generate(text, **kwargs)
+        dest_dir = Path(out_dir) if out_dir else Path(".")
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / f"{uuid.uuid4().hex}-ai-voice.wav"
+        ta.save(str(dest_path), wav, model.sr)
+        return {
+            "status": OK,
+            "audio_path": str(dest_path),
+            "cloned": bool(reference_audio_path),
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "message": str(exc)}
 
 
 # --------------------------------------------------------------------

@@ -905,7 +905,6 @@
   }
 
   document.getElementById('ai-music-btn')?.addEventListener('click', () => callProviderStub(api('/ai/music'), {}));
-  document.getElementById('ai-voice-btn')?.addEventListener('click', () => callProviderStub(api('/ai/voice'), { text: 'Hello' }));
 
   async function callProviderStub(url, payload) {
     const out = document.getElementById('ai-provider-result');
@@ -914,6 +913,55 @@
     const data = await res.json();
     out.textContent = data.message || JSON.stringify(data);
   }
+
+  // ---- AI Voice (self-hosted Chatterbox -- a real, working generator,
+  // not a provider stub like AI Music/Image/Animation above) ----
+  async function loadAiVoiceReferenceOptions() {
+    const select = document.getElementById('ai-voice-reference');
+    if (!select) return;
+    const res = await fetch(api('/ai/voice/reference-options'));
+    if (!res.ok) return;
+    const items = await res.json();
+    // Keep the "None" option, replace everything after it.
+    select.length = 1;
+    items.forEach((item) => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = `${item.filename} (${item.category})`;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById('ai-voice-btn')?.addEventListener('click', async () => {
+    const status = document.getElementById('ai-voice-status');
+    const player = document.getElementById('ai-voice-player');
+    const text = document.getElementById('ai-voice-text').value;
+    if (!text.trim()) { status.textContent = 'Type something to speak first.'; return; }
+    const referenceAssetId = document.getElementById('ai-voice-reference').value || null;
+    const exaggeration = parseFloat(document.getElementById('ai-voice-exaggeration').value || '0.5');
+    const cfgWeight = parseFloat(document.getElementById('ai-voice-cfg').value || '0.5');
+    status.textContent = 'Generating (this can take a little while, especially the first time while the voice model loads)...';
+    player.style.display = 'none';
+    const res = await fetch(api('/ai/voice'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text, reference_asset_id: referenceAssetId,
+        exaggeration, cfg_weight: cfgWeight,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
+      status.textContent = data.cloned
+        ? 'Done -- cloned voice added to your Media Library.'
+        : 'Done -- default-voice speech added to your Media Library.';
+      player.src = api(`/media/${data.asset.id}/file`);
+      player.style.display = 'block';
+      loadMedia();
+      loadAiVoiceReferenceOptions();
+    } else {
+      status.textContent = data.message || data.error || 'Could not generate speech.';
+    }
+  });
 
   // ---- Project actions ----
   document.getElementById('btn-backup')?.addEventListener('click', async () => {
@@ -1084,12 +1132,9 @@
   function renderLibraryItem(item) {
     const row = document.createElement('div');
     row.className = 'card';
-    const priceLabel = item.is_free
-      ? 'Free'
-      : (item.price_usd != null ? `$${item.price_usd.toFixed(2)} (purchasing not connected)` : 'Paid (purchasing not connected)');
     const actionLabel = item.kind === 'project_template' ? 'Add Tracks to This Project' : 'Add to Media Library';
     row.innerHTML = `
-      <strong>${escapeHtml(item.title)}</strong> &mdash; <span class="hint">${priceLabel}</span>
+      <strong>${escapeHtml(item.title)}</strong> &mdash; <span class="hint">Free</span>
       <p class="hint">${escapeHtml(item.description || '')}</p>
       <button class="btn secondary" type="button" data-library-use>${actionLabel}</button>
       <span role="status" data-library-status></span>
@@ -1121,4 +1166,5 @@
   loadTimeline();
   loadCollaborators();
   loadLibrary();
+  loadAiVoiceReferenceOptions();
 })();

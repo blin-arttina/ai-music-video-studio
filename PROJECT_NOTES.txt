@@ -344,13 +344,18 @@ DEVELOPMENT DECISIONS
   duplicates them, and importing an asset into a project was confirmed
   to copy a real, playable file into that project's own Media Library
   folder and hash it like any normal upload.
-  The model also supports paid items (is_free / price_usd fields), but
-  since no payment provider is connected, requesting a paid template or
-  asset returns a clear "purchasing isn't connected yet" error (HTTP
-  402) rather than granting it for free or faking a purchase -- the same
-  honest pattern already used for an unconnected AI provider. This was
-  tested directly: a paid template item was created and confirmed to
-  raise that error instead of being applied.
+  CORRECTION (2026-09-25): this originally also included a "paid item"
+  concept (is_free/price_usd fields, a 402 "purchasing isn't connected"
+  response) modeled after the honest-unconnected-provider pattern used
+  for AI Music/Voice. The project owner clarified that was scope creep
+  she never asked for -- this project's only expected external account/
+  key requirement was an AI provider key, not a payment provider -- so
+  the paid-item concept has been removed entirely: LibraryItem no longer
+  has is_free/price_usd columns, apply_project_template() and
+  copy_media_asset_to_project() no longer have a paid-item check to
+  raise on, and the now-unused PurchaseNotConnectedError class/402
+  response/UI price label are all deleted. The Library is simply free,
+  full stop, matching what was actually asked for.
   Found and fixed a real, unrelated bug while building this: branding.py
   (Studio Branding, from the previous feature) referenced
   `CONFIG.BASE_DIR`, which does not exist on the Config class -- only
@@ -506,6 +511,90 @@ DEVELOPMENT DECISIONS
   other, and corrupted localStorage content or a storage write failure
   (private browsing/quota) is swallowed instead of crashing the Timeline
   render -- same safety guarantees as the existing text draft.
+- AI Voice (was FUTURE FEATURES item 2, "wire ElevenLabs or similar") is
+  now a real, working implementation -- but the project owner explicitly
+  chose Chatterbox (resemble-ai/chatterbox, MIT-licensed, free/open-
+  source) over ElevenLabs after learning it clones voices from a short
+  sample just as well, with no account, no key, and no per-use cost, and
+  after I corrected an earlier claim of mine that self-hosting a voice
+  model would need a GPU -- Chatterbox's smaller "Nano" variant is
+  documented by Resemble AI as running about 3x faster than real-time on
+  8 CPU cores, so a GPU isn't actually required.
+  What was built: config.py gained CHATTERBOX_DEVICE (default "cpu") and
+  CHATTERBOX_NANO (default true) settings; source/ai/modules.py's
+  generate_voice() now lazily loads a real ChatterboxTurboTTS model
+  (cached in memory after first load, with a load FAILURE also cached so
+  a missing install doesn't retry-and-refail on every single call) and
+  calls its real, documented generate() method, with an optional
+  reference audio path for actual voice cloning (falls back to the
+  model's own default voice when none is given, and says so honestly in
+  the response rather than claiming a clone that didn't happen); the
+  output wav is saved into the project's own Media Library as a new
+  voice asset, exactly like an upload or a recording. server.py's
+  POST /api/projects/<id>/ai/voice route now accepts an optional
+  reference_asset_id pointing at any of the project's own voice/audio
+  Media Library items (a new GET .../ai/voice/reference-options route
+  lists them for the dropdown), plus exaggeration/cfg_weight knobs from
+  Chatterbox's real API, and creates the MediaAsset row on success. The
+  AI Assistant tab's UI was rewritten to match: a text box, a "voice to
+  clone" dropdown sourced from the project's real Media Library, an
+  advanced section for the two knobs, and an inline audio player for the
+  result -- replacing the old speed/age/emotion controls, which never
+  did anything real under the previous always-"not-connected" ElevenLabs
+  stub and would have been dishonest to keep now that generation is real
+  but doesn't actually support age/emotion controls.
+  Full honesty on testing: this sandbox still cannot install PyTorch or
+  chatterbox-tts (confirmed directly -- `pip install chatterbox-tts`
+  fails here exactly like every other external package), so the actual
+  model was never run here. What WAS verified for real: a standalone
+  test script injected fake `chatterbox.tts_turbo` and `torchaudio`
+  modules matching the real package's documented shapes (from_pretrained,
+  .generate(), .sr, ta.save()) and drove generate_voice() through it --
+  confirmed the real "not installed" path fires correctly and caches its
+  failure rather than retrying every call, confirmed device="cpu"/
+  nano=True are passed to from_pretrained() matching the new config
+  defaults, confirmed a reference path is correctly forwarded as
+  audio_prompt_path (and correctly omitted when none is given, with
+  "cloned" honestly reported as False in that case), confirmed custom
+  exaggeration/cfg_weight values are threaded through rather than
+  silently defaulted, confirmed two generated files never collide, and
+  confirmed a real exception from the model's generate() is caught and
+  reported as an error rather than crashing the request. Deploying this
+  to a real host (`pip install -r requirements-voice.txt` there) is the
+  remaining step to prove the model itself actually produces speech --
+  do that and try a short generation before relying on it.
+  requirements-voice.txt was added as a separate, optional requirements
+  file (not merged into requirements.txt) since chatterbox-tts pulls in
+  PyTorch and several GB of dependencies that most of this app's own
+  features don't need.
+- AI Music generation research (2026-09-26): after AI Voice moved to a
+  free, CPU-friendly, self-hosted model (Chatterbox), the project owner
+  asked whether music generation had an equivalent option. It doesn't --
+  checked the current (2026) open-source landscape directly and none of
+  the viable models run realistically on CPU:
+    - ACE-Step: Apache 2.0 (commercial use OK), most GPU-efficient of the
+      real options at ~8GB VRAM minimum, fast/diffusion-based, but some
+      reported metallic-shimmer artifacts on vocals.
+    - YuE: Apache 2.0 (commercial OK), ~16GB VRAM minimum, generates full
+      songs with vocal melodies from lyrics at the highest quality of the
+      open options, but slower.
+    - MusicGen (Meta): ruled out outright -- CC BY-NC 4.0, non-commercial
+      only, a hard license blocker for anything the project owner might
+      ever sell or share commercially.
+    - Stable Audio Open: capped at a 47-second output, a Stability AI
+      community license with a revenue threshold -- fine for short sound
+      design, not for full songs.
+  Unlike voice, none of these are a genuinely free option: self-hosting
+  any of them means renting real GPU compute (e.g. ~$0.20-0.50+/hour on
+  something like RunPod), which is an ongoing cost in the same rough
+  category as just paying a hosted API (Suno, Udio, or one of these
+  models hosted on Replicate) per generation instead. Given that
+  tradeoff, the project owner chose to park AI Music entirely for now
+  rather than commit to either a GPU-rental bill or a per-use API cost.
+  Nothing was built for this beyond what already existed (the honest
+  "not connected" AI_MUSIC_PROVIDER_API_KEY placeholder). This research
+  is recorded here so a future decision to proceed can start from real,
+  current options instead of re-researching the landscape from scratch.
 
 KNOWN ISSUES / LIMITATIONS
 ----------------------------
@@ -518,10 +607,13 @@ KNOWN ISSUES / LIMITATIONS
 - Video watermarking requires ffmpeg to be installed on the host. If
   it's missing, video export returns a clear 503 error rather than
   silently shipping an unwatermarked file.
-- AI Music/Voice/Image/Animation need a real provider account and API
-  key to do anything beyond reporting "not connected" — none is
-  wired to a specific vendor by default, since that's a paid-service
-  and account decision for the project owner to make.
+- AI Music/Image/Animation need a real provider account and API key to
+  do anything beyond reporting "not connected" — none is wired to a
+  specific vendor by default, since that's a paid-service and account
+  decision for the project owner to make. AI Voice is different: it's
+  wired to a real, free, self-hosted model (Chatterbox) that just needs
+  `pip install -r requirements-voice.txt` on the actual server — see
+  DEVELOPMENT DECISIONS for what that does and doesn't cover yet.
 - No automated test suite (pytest etc.) yet. This build sandbox could
   not reach pypi.org (blocked with a 403 at the network level), so
   Flask/SQLAlchemy/etc. could not be pip-installed or run end-to-end
@@ -548,16 +640,32 @@ KNOWN ISSUES / LIMITATIONS
   DECISIONS above for exactly what is and isn't covered.
 FUTURE FEATURES (priority order for continued work)
 ------------------------------------------------------------------
-1. Wire a real AI music-generation provider once one is chosen.
-2. Wire ElevenLabs (or similar) for AI Voice (speed/age/emotion
-   controls), matching the earlier voice-cloning discussion from the
-   DIY Animation and Audio project.
-3. Optional: paid items in the Downloadable Asset & Template Library
-   once a payment provider account/API key is chosen and provided (see
-   DEVELOPMENT DECISIONS — the model and an honest "not connected"
-   response already exist; free items work today).
+1. AI Music generation: researched on 2026-09-26 and explicitly parked by
+   the project owner for now (see DEVELOPMENT DECISIONS for the research
+   -- unlike AI Voice, there's no free/CPU-friendly open-source option
+   for music; the realistic choices are self-hosted on rented GPU time
+   or a paid hosted API, and she chose to skip it rather than pick
+   either yet). Revisit once she wants to spend on this -- see
+   DEVELOPMENT DECISIONS for the actual current options and their real
+   VRAM/licensing tradeoffs so this doesn't need re-researching from
+   scratch.
+2. Run `pip install -r requirements-voice.txt` on the real server and
+   confirm Chatterbox actually generates speech there — the integration
+   is built and unit-tested against a stand-in for the package (see
+   DEVELOPMENT DECISIONS), but the real model has never run, since this
+   sandbox can't install it. This is a verification step, not new code.
 
-Spec §5 (Audio and Voice) is fully covered. Spec §7 (Video Creator) is
+There is no payment-provider item on this list on purpose — the
+Downloadable Asset & Template Library is entirely free by design (see
+DEVELOPMENT DECISIONS, 2026-09-25 correction). AI Voice needs no account
+or key at all now (self-hosted Chatterbox); the only remaining account/
+key this project needs from its owner is an AI music-generation provider
+key for item 1 above.
+
+Spec §5 (Audio and Voice) is fully covered. AI Voice generation is wired
+to a real, free, self-hosted model (Chatterbox) rather than a paid API —
+see DEVELOPMENT DECISIONS for what's built versus what still needs
+verifying on a real server. Spec §7 (Video Creator) is
 fully covered: trim, crop, rotate, fade, captions, playback, and
 cross-clip crossfade transitions are all built and tested against real
 video/audio. Phase 5 (Collaboration) is fully covered: invite/permission-
@@ -570,11 +678,10 @@ covered: resolution, frame rate, video/audio quality, and file format
 are all selectable on export, alongside the always-on watermark. Spec
 §14 (AI Project Memory) is fully covered: every AI Assistant call now
 automatically includes the project's current state as context. Spec
-§23 (Downloadable Asset & Template Library) is covered for free items:
-originally-generated project templates and placeholder media assets can
-be browsed and pulled into any project; paid items are modeled but
-honestly report that purchasing isn't connected yet, since no payment
-provider has been chosen. Spec §12 (Backup/Export/Import) is fully
+§23 (Downloadable Asset & Template Library) is fully covered: originally-
+generated project templates and placeholder media assets can be browsed
+and pulled into any project, entirely free — there is no paid tier and
+no payment provider anywhere in this app. Spec §12 (Backup/Export/Import) is fully
 covered: export/backup ZIPs now carry a full manifest of the project's
 database rows alongside its files, and importing one restores a working
 project (media, text, and Timeline included), not just a folder of files.

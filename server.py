@@ -1304,9 +1304,52 @@ def api_ai_voice(project_id):
     project = Project.query.get_or_404(project_id)
     if not owns_or_has_permission(project, "view"):
         return jsonify({"error": "forbidden"}), 403
+    if not owns_or_has_permission(project, "edit"):
+        return jsonify({"error": "forbidden"}), 403
     d = request.get_json(force=True)
-    return jsonify(ai.generate_voice(d.get("text", ""), float(d.get("speed", 1.0)),
-                                      d.get("age", "adult"), d.get("emotion", "neutral")))
+    text = d.get("text", "")
+    exaggeration = float(d.get("exaggeration", 0.5))
+    cfg_weight = float(d.get("cfg_weight", 0.5))
+
+    reference_path = None
+    reference_asset_id = d.get("reference_asset_id")
+    if reference_asset_id:
+        reference_asset = MediaAsset.query.filter_by(id=reference_asset_id, project_id=project.id).first()
+        if not reference_asset:
+            return jsonify({"error": "reference media asset not found in this project"}), 404
+        if reference_asset.category not in ("voice", "audio"):
+            return jsonify({"error": "the reference clip must be a voice or audio Media Library item"}), 400
+        reference_path = reference_asset.storage_path
+
+    dest_dir = Path(project.folder_path) / _category_folder("voice")
+    result = ai.generate_voice(text, reference_audio_path=reference_path,
+                                exaggeration=exaggeration, cfg_weight=cfg_weight,
+                                out_dir=str(dest_dir))
+    if result.get("status") != ai.OK:
+        return jsonify(result)
+
+    audio_path = Path(result["audio_path"])
+    file_hash = hashlib.sha256(audio_path.read_bytes()).hexdigest()
+    asset = MediaAsset(
+        project_id=project.id, category="voice", filename=audio_path.name,
+        storage_path=str(audio_path), original_hash=file_hash,
+    )
+    db.session.add(asset)
+    db.session.commit()
+    log_audit(project.id, "ai_generate_voice", "cloned" if result.get("cloned") else "default voice")
+    return jsonify({"status": ai.OK, "cloned": result.get("cloned", False), "asset": asset.to_dict()}), 201
+
+
+@app.route("/api/projects/<project_id>/ai/voice/reference-options")
+@login_required
+def api_ai_voice_reference_options(project_id):
+    project = Project.query.get_or_404(project_id)
+    if not owns_or_has_permission(project, "view"):
+        return jsonify({"error": "forbidden"}), 403
+    assets = MediaAsset.query.filter_by(project_id=project.id).filter(
+        MediaAsset.category.in_(["voice", "audio"])
+    ).all()
+    return jsonify([a.to_dict() for a in assets])
 
 
 @app.route("/api/projects/<project_id>/ai/image", methods=["POST"])
@@ -1374,10 +1417,7 @@ def api_library_apply_template(item_id):
         return jsonify({"error": "forbidden"}), 403
     if item.kind != "project_template":
         return jsonify({"error": "this library item is not a project template"}), 400
-    try:
-        created = lib.apply_project_template(item, project)
-    except lib.PurchaseNotConnectedError as e:
-        return jsonify({"error": str(e), "purchase_not_connected": True}), 402
+    created = lib.apply_project_template(item, project)
     log_audit(project.id, "apply_library_template", item.title)
     return jsonify({"tracks_created": [t.to_dict() for t in created]}), 201
 
@@ -1395,8 +1435,6 @@ def api_library_import_asset(item_id):
         return jsonify({"error": "this library item is not a media asset"}), 400
     try:
         asset = lib.copy_media_asset_to_project(item, project)
-    except lib.PurchaseNotConnectedError as e:
-        return jsonify({"error": str(e), "purchase_not_connected": True}), 402
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 500
     log_audit(project.id, "import_library_asset", item.title)
