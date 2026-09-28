@@ -38,18 +38,18 @@ class BlindArtAuthClient:
     # ---- core HTTP calls -------------------------------------------------
 
     def signup(self, email: str, password: str, name: str = "") -> dict:
-        return self._post("/auth/signup", {"email": email, "password": password, "name": name})
+        return self._post("/api/auth/signup", {"email": email, "password": password, "name": name})
 
     def login(self, email: str, password: str) -> str:
         """Returns a JWT access token."""
-        data = self._post("/auth/login", {"email": email, "password": password})
+        data = self._post("/api/auth/login", {"email": email, "password": password})
         token = data.get("access_token") or data.get("token")
         if not token:
             raise BlindArtAuthError("Blind Art Server did not return a token.")
         return token
 
     def me(self, token: str) -> dict:
-        return self._get("/auth/me", token)
+        return self._get("/api/auth/me", token)
 
     # ---- cached-token convenience (used for service accounts, e.g. this
     # app connecting to Blind Art Server as itself for shared operations) --
