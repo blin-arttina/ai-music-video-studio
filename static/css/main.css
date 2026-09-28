@@ -110,6 +110,23 @@ h3 { font-size: var(--font-size-base); }
 .field textarea { min-height: 200px; font-family: inherit; }
 .hint { color: var(--text-dim); font-size: 16px; }
 
+.password-field {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+.password-field input { flex: 1 1 auto; width: auto; }
+.password-toggle {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  min-height: 0;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .password-field { flex-direction: column; }
+  .password-field input { width: 100%; }
+}
+
 .card {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
