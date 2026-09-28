@@ -5,8 +5,9 @@ AI-ASSISTED MUSIC STUDIO AND VIDEO GENERATOR — USER GUIDE
 --------------
 This app does not have its own separate password. Sign in with your
 Blind Art Server account (the same account used by other Blind Art
-apps). If you don't have one yet, create it from any connected Blind
-Art app first.
+apps). If you don't have one yet, click "Create one here" on the sign-in
+page to make a new account right from this app — it will then work on
+any other connected Blind Art app too.
 
 2. MAIN MENU
 ------------

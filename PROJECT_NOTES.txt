@@ -694,6 +694,32 @@ Gradle project under android-wrapper/, with a genuine gradle-wrapper.jar
 and your icon at every density) but not build-verified — see DEVELOPMENT
 DECISIONS and android-wrapper/README_ANDROID_WRAPPER.txt.
 
+DEVELOPMENT DECISIONS, 2026-09-27 (Render deploy + account signup fix):
+- First deploy to Render failed twice via the manual "New Web Service"
+  form: the Start Command field kept silently resetting to Render's
+  default (gunicorn app:app instead of gunicorn server:app) between
+  when it was typed and when the deploy actually ran, causing Render
+  to fall back to auto-detecting a build method (Poetry), which failed
+  with exit code 127. Fix: added render.yaml at the project root,
+  specifying buildCommand, startCommand, and both required env vars
+  (SECRET_KEY generated, BLIND_ART_SERVER_URL set), then deployed via
+  Render's "New > Blueprint" flow instead of the manual form. Blueprint
+  reads render.yaml directly, so there's no form field to lose --
+  this deployed successfully on the first try. Going forward, any
+  Render redeploy of this project should go through Blueprint sync
+  (or updating render.yaml + pushing), not the manual web-service form.
+- After first successful deploy, discovered the login page had no way
+  for a brand-new user (no existing Blind Art Server account) to sign
+  up -- BlindArtAuthClient.signup() already existed and called the
+  Blind Art Server's /auth/signup endpoint, but no route or page in
+  this app ever called it. Added GET /signup and POST /auth/signup to
+  server.py (mirroring the existing login flow: calls auth_client
+  .signup(), then logs the new user in immediately) plus a new
+  signup.html template, and linked it from login.html. This was a
+  real gap, not a maintenance nice-to-have: without it, this app could
+  only ever be used by people who already had an account created
+  through a different Blind Art app first.
+
 WHEN CONTINUING THIS PROJECT: work down the list above in order,
 verify each new capability against real input where possible (the way
 audio_editor.py was tested against an actual generated audio file, not

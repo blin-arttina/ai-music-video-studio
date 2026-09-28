@@ -146,6 +146,42 @@ def do_logout():
     return redirect(url_for("login_page"))
 
 
+@app.route("/signup")
+def signup_page():
+    return render_template("signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL)
+
+
+@app.route("/auth/signup", methods=["POST"])
+def do_signup():
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    password = request.form.get("password", "")
+    confirm = request.form.get("confirm_password", "")
+    if not email or not password:
+        return render_template(
+            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
+            error="Email and password are required.", name=name, email=email,
+        )
+    if password != confirm:
+        return render_template(
+            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
+            error="Passwords do not match.", name=name, email=email,
+        )
+    try:
+        auth_client.signup(email, password, name)
+        token = auth_client.login(email, password)
+        me = auth_client.me(token)
+    except BlindArtAuthError as exc:
+        return render_template(
+            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
+            error=str(exc), name=name, email=email,
+        )
+    session["token"] = token
+    session["email"] = email
+    session["name"] = me.get("name") or name or email
+    return redirect(url_for("index"))
+
+
 @app.route("/project/<project_id>")
 @login_required
 def project_page(project_id):
