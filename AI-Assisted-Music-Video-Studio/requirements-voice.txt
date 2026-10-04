@@ -1,0 +1,18 @@
+# Optional: install this in addition to requirements.txt only if you want
+# AI Voice (in the AI Assistant tab) to actually generate speech.
+#
+#   pip install -r requirements.txt -r requirements-voice.txt
+#
+# This pulls in PyTorch, so it's a large install (several GB) and the
+# first AI Voice generation will also download the Chatterbox model
+# weights the first time it runs. No account or API key is needed --
+# Chatterbox (resemble-ai/chatterbox) is free and open-source (MIT
+# licensed), and everything runs locally on this server.
+#
+# Default configuration (see config.py) uses the CPU-friendly "Nano"
+# variant, which Resemble AI states runs about 3x faster than real-time
+# on 8 CPU cores -- no GPU required. If your server does have an NVIDIA
+# GPU, set the environment variable CHATTERBOX_DEVICE=cuda for faster
+# generation (CHATTERBOX_NANO=false also works there if you want the
+# larger, higher-quality Turbo model instead of Nano).
+chatterbox-tts

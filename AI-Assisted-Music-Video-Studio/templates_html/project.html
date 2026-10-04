@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — AI-Assisted Music Studio{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('index') }}">&larr; Main Menu</a></p>
+<h2>{{ project.name }}</h2>
+<p class="hint">{{ project.description or "No description yet." }}</p>
+
+<div class="notice" role="note">
+  Watermarking on exported images/video and ownership protection on saved text are always on for this project and cannot be turned off.
+</div>
+
+<div class="tabs" role="tablist" aria-label="Project sections" id="project-id-holder" data-project-id="{{ project.id }}">
+  <button role="tab" aria-selected="true" id="tab-text" data-target="panel-text">Music &amp; Text Studio</button>
+  <button role="tab" aria-selected="false" id="tab-media" data-target="panel-media">Media Library</button>
+  <button role="tab" aria-selected="false" id="tab-library" data-target="panel-library">Library</button>
+  <button role="tab" aria-selected="false" id="tab-timeline" data-target="panel-timeline">Timeline</button>
+  <button role="tab" aria-selected="false" id="tab-ai" data-target="panel-ai">AI Assistant</button>
+  <button role="tab" aria-selected="false" id="tab-project" data-target="panel-project">Project</button>
+  <button role="tab" aria-selected="false" id="tab-settings" data-target="panel-settings">Settings</button>
+</div>
+
+<section id="panel-text" class="tabpanel active" role="tabpanel" aria-labelledby="tab-text">
+  <h3>Lyrics, Notes &amp; Scripts</h3>
+  <p class="hint">Every save is hashed, timestamped, and versioned automatically. This documents authorship — it is not a legal copyright filing.</p>
+
+  <form id="new-text-form" class="card">
+    <div class="field">
+      <label for="text-kind">Type</label>
+      <select id="text-kind">
+        <option value="lyrics">Lyrics</option>
+        <option value="note">Note</option>
+        <option value="script">Script</option>
+        <option value="poem">Poem</option>
+        <option value="caption">Caption</option>
+        <option value="dialogue">Dialogue</option>
+        <option value="narration">Narration</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="text-title">Title</label>
+      <input id="text-title" type="text" required>
+    </div>
+    <div class="field">
+      <label for="text-body">Content</label>
+      <textarea id="text-body"></textarea>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="text-private" checked> Keep private (recommended)</label>
+    </div>
+    <button class="btn" type="submit">Save New Item (creates ownership record)</button>
+    <span id="new-text-status" role="status"></span>
+    <p id="draft-restore-notice" class="hint" hidden>
+      Restored an unsaved draft from earlier so it isn't lost.
+      <button class="btn secondary" type="button" id="discard-draft-btn">Discard Draft</button>
+    </p>
+  </form>
+
+  <h3>Your Protected Text</h3>
+  <div id="text-list" class="card">Loading...</div>
+</section>
+
+<section id="panel-media" class="tabpanel" role="tabpanel" aria-labelledby="tab-media" hidden>
+  <h3>Media Library</h3>
+
+  <div class="card">
+    <h4>Record from Microphone</h4>
+    <p class="hint">Records directly in this browser tab and saves the result to your Media Library automatically.</p>
+    <div class="field">
+      <label for="record-category">Save recording as</label>
+      <select id="record-category">
+        <option value="voice">Voice</option>
+        <option value="music">Music</option>
+        <option value="audio">Audio</option>
+      </select>
+    </div>
+    <button class="btn" id="record-start-btn" type="button">Start Recording</button>
+    <button class="btn danger" id="record-stop-btn" type="button" disabled>Stop Recording</button>
+    <p id="record-status" role="status" aria-live="polite" class="hint">Not recording.</p>
+  </div>
+
+  <form id="upload-form" class="card">
+    <div class="field">
+      <label for="media-category">Category</label>
+      <select id="media-category">
+        <option value="image">Image</option>
+        <option value="audio">Audio</option>
+        <option value="music">Music</option>
+        <option value="video">Video</option>
+        <option value="voice">Voice</option>
+        <option value="animation">Animation</option>
+        <option value="font">Font</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="media-file">File</label>
+      <input id="media-file" type="file" required>
+    </div>
+    <button class="btn" type="submit">Upload</button>
+    <span id="upload-status" role="status"></span>
+  </form>
+
+  <h3>Files</h3>
+  <div id="media-list" class="card">Loading...</div>
+
+  <h3>Export With Watermark</h3>
+  <p class="hint">Select an image or video above, then export it below — the creator watermark is applied automatically and cannot be removed.</p>
+  <form id="export-media-form" class="card">
+    <div class="field">
+      <label for="export-media-id">Media item</label>
+      <select id="export-media-id"></select>
+    </div>
+    <div class="field">
+      <label for="export-media-type">Type</label>
+      <select id="export-media-type">
+        <option value="image">Image</option>
+        <option value="video">Video</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="watermark-text">Watermark text</label>
+      <input id="watermark-text" type="text" placeholder="Your name or project name">
+      <p class="hint" id="watermark-text-brand-hint" hidden>Leave this blank to use your saved studio name automatically.</p>
+    </div>
+    <div class="field" id="watermark-logo-field" hidden>
+      <label><input type="checkbox" id="watermark-include-logo" checked> Include my studio logo</label>
+      <p class="hint">Set up your logo once in the Settings tab under "Studio Branding."</p>
+    </div>
+    <div class="field">
+      <label for="watermark-position">Position</label>
+      <select id="watermark-position">
+        <option value="corner">Corner</option>
+        <option value="center">Center</option>
+        <option value="tiled">Tiled</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="watermark-opacity">Opacity (0.25 - 0.85)</label>
+      <input id="watermark-opacity" type="number" min="0.25" max="0.85" step="0.05" value="0.55">
+    </div>
+
+    <details open>
+      <summary>Export settings (resolution, frame rate, quality, format)</summary>
+      <div class="field">
+        <label for="export-resolution">Resolution</label>
+        <select id="export-resolution">
+          <option value="source">Source (no resizing)</option>
+          <option value="1080p">1080p (1920px long side)</option>
+          <option value="720p">720p (1280px long side)</option>
+          <option value="480p">480p (854px long side)</option>
+        </select>
+      </div>
+      <div class="field export-video-only">
+        <label for="export-frame-rate">Frame rate (video only)</label>
+        <select id="export-frame-rate">
+          <option value="source">Source (no change)</option>
+          <option value="24">24 fps</option>
+          <option value="30">30 fps</option>
+          <option value="60">60 fps</option>
+        </select>
+      </div>
+      <div class="field export-video-only">
+        <label for="export-video-quality">Video quality (video only)</label>
+        <select id="export-video-quality">
+          <option value="high">High (larger file)</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low (smaller file)</option>
+        </select>
+      </div>
+      <div class="field export-video-only">
+        <label for="export-audio-bitrate">Audio quality (video only)</label>
+        <select id="export-audio-bitrate">
+          <option value="128k">128 kbps</option>
+          <option value="192k" selected>192 kbps</option>
+          <option value="256k">256 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="export-format">File format</label>
+        <select id="export-format">
+          <!-- populated by JS to match the chosen Type (image: PNG/JPG, video: MP4/WebM) -->
+        </select>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="export-invisible-watermark"> Add invisible/forensic watermark (experimental)</label>
+        <p class="hint" id="invisible-watermark-hint">
+          Hides an extra ownership marker in the file, in addition to the visible watermark above.
+          For images: only works with PNG format (a real hidden marker in the pixels, but it's
+          destroyed by resizing or saving as JPEG). For video: an easy but fragile metadata tag,
+          not hidden in the video/audio itself — stripped by re-encoding or many editing tools.
+          Check a file later in "Verify Invisible Watermark" below.
+        </p>
+      </div>
+    </details>
+
+    <button class="btn" type="submit">Export with Watermark</button>
+    <span id="export-media-status" role="status"></span>
+  </form>
+
+  <div class="card">
+    <h4>Verify Invisible Watermark</h4>
+    <p class="hint">Upload any image or video to check whether it carries an invisible watermark this app embedded, and see what it says.</p>
+    <form id="verify-invisible-form">
+      <div class="field">
+        <label for="verify-invisible-file">File to check</label>
+        <input id="verify-invisible-file" type="file" accept="image/*,video/*" required>
+      </div>
+      <button class="btn secondary" type="submit">Check File</button>
+      <span id="verify-invisible-status" role="status"></span>
+    </form>
+  </div>
+</section>
+
+<section id="panel-library" class="tabpanel" role="tabpanel" aria-labelledby="tab-library" hidden>
+  <h3>Downloadable Asset &amp; Template Library</h3>
+  <p class="hint">Free, originally-generated starter content you can pull straight into this project: project templates (a ready-made set of tracks) and small placeholder media (tones/chimes, gradient backgrounds). No account or payment needed — everything in this Library is free.</p>
+
+  <div id="library-templates-container">
+    <h4>Project Templates</h4>
+    <div id="library-templates-list">Loading library...</div>
+  </div>
+
+  <div id="library-assets-container">
+    <h4>Media Assets</h4>
+    <div id="library-assets-list">Loading library...</div>
+  </div>
+</section>
+
+<section id="panel-timeline" class="tabpanel" role="tabpanel" aria-labelledby="tab-timeline" hidden>
+  <h3>Multi-Track Timeline</h3>
+  <p class="hint">Total length: <span id="timeline-duration">0</span> seconds. Clips are edited with exact numbers in fields below rather than dragging, so every value stays readable and adjustable with a screen reader.</p>
+
+  <div class="card">
+    <button class="btn secondary" type="button" id="timeline-undo-btn" disabled>Undo</button>
+    <button class="btn secondary" type="button" id="timeline-redo-btn" disabled>Redo</button>
+    <span id="timeline-history-status" role="status" class="hint"></span>
+    <p class="hint">Undo/Redo cover changes to tracks and clips (adding, moving, resizing, trimming, splitting, deleting, muting, locking). Saved lyrics/text have their own version history in the Music &amp; Text Studio tab instead.</p>
+  </div>
+
+  <form id="new-track-form" class="card">
+    <h4>Add Track</h4>
+    <div class="field">
+      <label for="track-name">Track name</label>
+      <input id="track-name" type="text" placeholder="e.g. Lead Vocals" required>
+    </div>
+    <div class="field">
+      <label for="track-kind">Track type</label>
+      <select id="track-kind">
+        <option value="music">Music</option>
+        <option value="vocals">Vocals</option>
+        <option value="dialogue">Dialogue</option>
+        <option value="sfx">Sound Effects</option>
+        <option value="image">Images</option>
+        <option value="video">Video</option>
+        <option value="animation">Animation</option>
+        <option value="text">Text</option>
+        <option value="lyrics">Lyrics</option>
+        <option value="ai">AI-Generated</option>
+      </select>
+    </div>
+    <button class="btn" type="submit">Add Track</button>
+    <span id="new-track-status" role="status"></span>
+    <p class="hint" id="track-draft-notice" hidden>Restored a track name you'd started typing but hadn't added yet.</p>
+  </form>
+
+  <div id="tracks-container">Loading tracks...</div>
+</section>
+
+<section id="panel-ai" class="tabpanel" role="tabpanel" aria-labelledby="tab-ai" hidden>
+  <h3>AI Creative Assistant</h3>
+  <p class="hint">The AI suggests; you stay in control of every change.</p>
+  <p class="hint">Every question and draft below automatically includes a short summary of
+    this project — how many tracks/clips, media counts, your studio name, and the
+    TITLES of your saved lyrics/notes/scripts (never their actual content) — so you
+    don't have to re-explain your project every time you ask something.</p>
+
+  <div class="card">
+    <h4>Ask a question</h4>
+    <div class="field"><label for="ai-question">Question</label><textarea id="ai-question" style="min-height:80px;"></textarea></div>
+    <button class="btn" id="ai-ask-btn" type="button">Ask</button>
+    <p id="ai-answer" class="hint" role="status"></p>
+  </div>
+
+  <div class="card">
+    <h4>Draft Lyrics</h4>
+    <div class="field"><label for="ai-lyrics-idea">Idea</label><input id="ai-lyrics-idea" type="text"></div>
+    <button class="btn" id="ai-lyrics-btn" type="button">Draft Lyrics</button>
+    <pre id="ai-lyrics-result" class="hint" style="white-space:pre-wrap;"></pre>
+  </div>
+
+  <div class="card">
+    <h4>Video / Scene Plan</h4>
+    <div class="field"><label for="ai-video-concept">Concept</label><input id="ai-video-concept" type="text"></div>
+    <button class="btn" id="ai-video-btn" type="button">Draft Plan</button>
+    <pre id="ai-video-result" class="hint" style="white-space:pre-wrap;"></pre>
+  </div>
+
+  <div class="card">
+    <h4>AI Music / Image / Animation</h4>
+    <p class="hint">These modules generate through an external provider. Until one is connected on the server, requests here will report "not connected" rather than fake a result.</p>
+    <button class="btn secondary" id="ai-music-btn" type="button">Try AI Music</button>
+    <p id="ai-provider-result" class="hint" role="status"></p>
+  </div>
+
+  <div class="card">
+    <h4>AI Voice</h4>
+    <p class="hint">Generates real speech using Chatterbox, a free, self-hosted voice model — no account or per-use cost. Pick a voice recording already in this project's Media Library to clone that voice, or leave it blank to use the model's own default voice. If this says "not connected," the server this app is running on doesn't have Chatterbox installed yet — see PROJECT_NOTES.txt for the one-line setup.</p>
+    <div class="field">
+      <label for="ai-voice-text">Text to speak</label>
+      <textarea id="ai-voice-text" rows="3"></textarea>
+    </div>
+    <div class="field">
+      <label for="ai-voice-reference">Voice to clone (optional)</label>
+      <select id="ai-voice-reference"><option value="">None (use the default voice)</option></select>
+    </div>
+    <details>
+      <summary>Advanced (optional)</summary>
+      <div class="field"><label for="ai-voice-exaggeration">Exaggeration (0-1)</label><input id="ai-voice-exaggeration" type="number" min="0" max="1" step="0.1" value="0.5"></div>
+      <div class="field"><label for="ai-voice-cfg">Cfg weight (0-1)</label><input id="ai-voice-cfg" type="number" min="0" max="1" step="0.1" value="0.5"></div>
+    </details>
+    <button class="btn" id="ai-voice-btn" type="button">Generate Voice</button>
+    <p id="ai-voice-status" class="hint" role="status"></p>
+    <audio id="ai-voice-player" controls style="display:none; width:100%; margin-top:8px;"></audio>
+  </div>
+</section>
+
+<section id="panel-project" class="tabpanel" role="tabpanel" aria-labelledby="tab-project" hidden>
+  <h3>Project Actions</h3>
+  <div class="card">
+    <h4>Save a Copy to Your Own Device</h4>
+    <p class="hint">"Export Complete Project (ZIP)" below downloads everything in this
+      project — media, saved text, and Timeline — as one file, using your browser's normal
+      download. From there, it's yours to keep anywhere you like:</p>
+    <ul class="hint">
+      <li><strong>Internal storage</strong> — it's already in your device's Downloads
+        folder as soon as the download finishes; move it with your file manager app if
+        you want it somewhere else.</li>
+      <li><strong>Google Drive, Dropbox, or Google One</strong> — open that app, choose
+        "Upload" (or use your file manager's "Share" / "Save to" option on the downloaded
+        ZIP), and pick it from your Downloads folder.</li>
+    </ul>
+    <p class="hint">This app doesn't connect to those services directly — you choose
+      where the file goes, using the apps you already have installed. "Import Project
+      (ZIP)" on the Main Menu brings a saved copy back in later, on this device or any
+      other.</p>
+    <button class="btn" id="btn-backup" type="button">Create Backup (ZIP)</button>
+    <button class="btn" id="btn-export-zip" type="button">Export Complete Project (ZIP)</button>
+    <button class="btn secondary" id="btn-duplicate" type="button">Duplicate Project</button>
+    <p id="project-action-status" role="status" class="hint"></p>
+  </div>
+  <div class="card">
+    <h4>Rename Project</h4>
+    <div class="field"><label for="rename-input">New name</label><input id="rename-input" type="text" value="{{ project.name }}"></div>
+    <button class="btn secondary" id="btn-rename" type="button">Rename</button>
+  </div>
+  <div class="card" id="collaborators-card">
+    <h4>Collaborators</h4>
+    <p class="hint">This app no longer has separate logins — anyone you give this app's
+      web address to can already open it and has full access to every project in it, the
+      same as you. The address itself is what controls access, so only share it with
+      people you want to have full access. The permission list below is kept for
+      reference but no longer restricts anything, since there's just one shared account
+      now rather than individual ones to assign tiers to.</p>
+    <div id="collaborators-list">Loading...</div>
+    <form id="invite-collaborator-form">
+      <div class="field">
+        <label for="collab-email">Email address (label only — no longer restricts access)</label>
+        <input id="collab-email" type="email" required placeholder="name@example.com">
+      </div>
+      <div class="field">
+        <label for="collab-permission">Permission (label only — no longer restricts access)</label>
+        <select id="collab-permission">
+          <option value="view">View</option>
+          <option value="comment">Comment</option>
+          <option value="edit">Edit</option>
+          <option value="full">Full</option>
+        </select>
+      </div>
+      <button class="btn secondary" type="submit">Add Collaborator Note</button>
+      <span id="invite-collaborator-status" role="status"></span>
+    </form>
+  </div>
+  <div class="card">
+    <h4>Audit Log</h4>
+    <div id="audit-log">Loading...</div>
+  </div>
+  <div class="card">
+    <h4>Delete Project</h4>
+    <button class="btn danger" id="btn-delete" type="button">Delete Project Permanently</button>
+  </div>
+</section>
+
+<section id="panel-settings" class="tabpanel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+  <h3>Settings</h3>
+  <div class="card">
+    <h4>Privacy</h4>
+    <label><input type="checkbox" id="setting-private" {% if project.is_private %}checked{% endif %}> Project is private</label>
+  </div>
+  <div class="card">
+    <h4>Studio Branding</h4>
+    <p class="hint">Your studio name and logo are saved once here and used as the default
+      watermark across ALL of your projects, not just this one — so you don't have to
+      retype a name or re-upload a logo every time you export.</p>
+    <div id="studio-brand-preview" class="hint">Loading...</div>
+    <form id="studio-brand-form">
+      <div class="field">
+        <label for="studio-brand-name">Studio / label name</label>
+        <input id="studio-brand-name" type="text" placeholder="e.g. Tina's Studio" maxlength="200">
+      </div>
+      <div class="field">
+        <label for="studio-brand-logo">Logo image (PNG with a transparent background works best)</label>
+        <input id="studio-brand-logo" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp">
+      </div>
+      <button class="btn" type="submit">Save Studio Branding</button>
+      <button class="btn secondary" type="button" id="clear-studio-logo-btn">Remove Logo Only</button>
+      <span id="studio-brand-status" role="status"></span>
+    </form>
+  </div>
+  <div class="card">
+    <h4>Content Protection</h4>
+    <p class="hint">Watermarking (images/video) and text ownership records (lyrics/notes/scripts) are required and always on in this app — there is no setting to disable them, by design.</p>
+  </div>
+  <div class="card">
+    <h4>Server</h4>
+    <p class="hint">Connected to Blind Art Server for accounts and sync.</p>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/project.js') }}"
+        data-project-id="{{ project.id }}"></script>
+{% endblock %}

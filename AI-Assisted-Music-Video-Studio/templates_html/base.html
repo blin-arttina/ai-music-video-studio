@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AI-Assisted Music Studio and Video Generator{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/music.png') }}" onerror="this.remove()">
+  <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}" onerror="this.remove()">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="app-header">
+    <img class="app-icon" src="{{ url_for('static', filename='icons/music.png') }}"
+         alt="" onerror="this.style.display='none'">
+    <h1>AI-Assisted Music Studio and Video Generator</h1>
+  </header>
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="app-footer">
+    Connected to Blind Art Server &middot; Watermarking and text ownership protection are always on.
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

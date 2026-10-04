@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ai-music-video-studio
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true

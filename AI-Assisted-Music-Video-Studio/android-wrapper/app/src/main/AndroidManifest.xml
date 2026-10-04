@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Needed to load the app's pages and talk to your server. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Needed for the in-app microphone recording feature (Media Library
+         "Start Recording" for Voice/Music/Audio). Android asks you to
+         approve this the first time you tap Start Recording, same as it
+         would in a regular browser. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Only applies on very old Android versions (9 and below); needed so
+         a downloaded, watermarked export or project ZIP can be saved to
+         your device's Downloads folder. Modern Android doesn't need this. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.MusicStudioWrapper"
+        android:usesCleartextTraffic="true">
+        <!--
+          usesCleartextTraffic="true" allows plain http:// as well as https://,
+          which is only useful while testing against a local/dev server that
+          doesn't have https set up yet. Once your app is deployed somewhere
+          with a real https:// address (Render, for example), you can safely
+          remove this line. See README_ANDROID_WRAPPER.txt for details.
+        -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

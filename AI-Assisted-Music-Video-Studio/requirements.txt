@@ -1,0 +1,16 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.35
+requests==2.32.3
+Werkzeug==3.0.4
+Pillow==10.4.0
+psycopg2-binary==2.9.9
+gunicorn==23.0.0
+anthropic==0.39.0
+
+# AI Voice (Chatterbox) is intentionally NOT listed above: it's a large,
+# optional install (pulls in PyTorch, several GB) that most deploys won't
+# want by default. Install it only if you want AI Voice working:
+#   pip install -r requirements-voice.txt
+# Everything else in this app works fine without it -- AI Voice just
+# reports "not connected" until it's installed. See PROJECT_NOTES.txt.
