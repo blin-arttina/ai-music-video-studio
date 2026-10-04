@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- A plain, no-action-bar theme: the web app's own header/nav is
-         already visible inside the page, so a native Android app bar on
-         top of it would just be a duplicate. -->
-    <style name="Theme.MusicStudioWrapper" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
-    </style>
-</resources>
