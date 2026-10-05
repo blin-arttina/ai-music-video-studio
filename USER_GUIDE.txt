@@ -1,13 +1,18 @@
 AI-ASSISTED MUSIC STUDIO AND VIDEO GENERATOR — USER GUIDE
 ============================================================
 
-1. SIGNING IN
---------------
-This app does not have its own separate password. Sign in with your
-Blind Art Server account (the same account used by other Blind Art
-apps). If you don't have one yet, click "Create one here" on the sign-in
-page to make a new account right from this app — it will then work on
-any other connected Blind Art app too.
+1. OPENING THE APP
+-------------------
+There is no sign-in step. This app has no account system of its own and
+no longer checks against any outside server — anyone who has its web
+address can open it and start working right away. It is not listed
+anywhere or discoverable by searching; the address itself is what
+controls who can get to it, so treat that address the way you'd treat a
+password and only share it with people you want to have access.
+
+Everything you create is saved to this app's own local project database
+(not tied to a personal login), so it's available the next time you or
+anyone with the address opens the app on any device.
 
 2. MAIN MENU
 ------------
@@ -215,19 +220,23 @@ Each project has these tabs:
     - Export Complete Project (ZIP): downloads everything in the
       project as one archive, including its media, saved text, and
       Timeline — not just the files — so it can be fully restored later
-      with Import Project (ZIP) on the Main Menu, on this account or a
-      different one.
+      with Import Project (ZIP) on the Main Menu, on this device or any
+      other. This is also how you keep your own copy outside the app:
+      the ZIP lands in your device's Downloads folder as a normal
+      download, and from there you can move it into internal storage,
+      or upload it into Google Drive, Dropbox, or Google One using
+      those apps' own "Upload" option (or your file manager's "Share" /
+      "Save to" option) — the app doesn't connect to those services
+      itself, you choose where the file goes.
     - Duplicate Project: makes a full copy under a new name.
     - Rename Project.
-    - Collaborators (only you, the owner, see this): invite someone by
-      the email address of their own Blind Art Server account and pick
-      what they can do — View, Comment, Edit, or Full access (everything
-      except deleting the project or managing collaborators themselves).
-      Change anyone's permission at any time from the dropdown next to
-      their name, and use "Revoke Access" / "Restore Access" to turn
-      their access off and back on without having to re-invite them.
-    - Audit Log: a running record of what happened in this project
-      (only the owner can see this).
+    - Collaborators: this app has no separate logins, so anyone with
+      its web address already has full access to every project, the
+      same as you. Treat that address like a password and only share it
+      with people you want to have full access. The Collaborators list
+      is kept as a reference/notes list only — it no longer restricts
+      what anyone can do.
+    - Audit Log: a running record of what happened in this project.
     - Delete Project Permanently: cannot be undone.
 
   SETTINGS

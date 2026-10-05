@@ -327,6 +327,22 @@
 <section id="panel-project" class="tabpanel" role="tabpanel" aria-labelledby="tab-project" hidden>
   <h3>Project Actions</h3>
   <div class="card">
+    <h4>Save a Copy to Your Own Device</h4>
+    <p class="hint">"Export Complete Project (ZIP)" below downloads everything in this
+      project — media, saved text, and Timeline — as one file, using your browser's normal
+      download. From there, it's yours to keep anywhere you like:</p>
+    <ul class="hint">
+      <li><strong>Internal storage</strong> — it's already in your device's Downloads
+        folder as soon as the download finishes; move it with your file manager app if
+        you want it somewhere else.</li>
+      <li><strong>Google Drive, Dropbox, or Google One</strong> — open that app, choose
+        "Upload" (or use your file manager's "Share" / "Save to" option on the downloaded
+        ZIP), and pick it from your Downloads folder.</li>
+    </ul>
+    <p class="hint">This app doesn't connect to those services directly — you choose
+      where the file goes, using the apps you already have installed. "Import Project
+      (ZIP)" on the Main Menu brings a saved copy back in later, on this device or any
+      other.</p>
     <button class="btn" id="btn-backup" type="button">Create Backup (ZIP)</button>
     <button class="btn" id="btn-export-zip" type="button">Export Complete Project (ZIP)</button>
     <button class="btn secondary" id="btn-duplicate" type="button">Duplicate Project</button>
@@ -338,20 +354,21 @@
     <button class="btn secondary" id="btn-rename" type="button">Rename</button>
   </div>
   <div class="card" id="collaborators-card">
-    <h4>Collaborators (owner only)</h4>
-    <p class="hint">Invite someone by the email address of their own Blind Art Server account.
-      They'll see this project the next time they sign in. Permission tiers, from least to
-      most access: View (look only), Comment (view + leave feedback, once commenting is
-      wired up), Edit (change text/media/timeline), Full (everything, including exporting
-      and inviting others — not deleting the project, which stays owner-only).</p>
+    <h4>Collaborators</h4>
+    <p class="hint">This app no longer has separate logins — anyone you give this app's
+      web address to can already open it and has full access to every project in it, the
+      same as you. The address itself is what controls access, so only share it with
+      people you want to have full access. The permission list below is kept for
+      reference but no longer restricts anything, since there's just one shared account
+      now rather than individual ones to assign tiers to.</p>
     <div id="collaborators-list">Loading...</div>
     <form id="invite-collaborator-form">
       <div class="field">
-        <label for="collab-email">Email address</label>
+        <label for="collab-email">Email address (label only — no longer restricts access)</label>
         <input id="collab-email" type="email" required placeholder="name@example.com">
       </div>
       <div class="field">
-        <label for="collab-permission">Permission</label>
+        <label for="collab-permission">Permission (label only — no longer restricts access)</label>
         <select id="collab-permission">
           <option value="view">View</option>
           <option value="comment">Comment</option>
@@ -359,12 +376,12 @@
           <option value="full">Full</option>
         </select>
       </div>
-      <button class="btn secondary" type="submit">Invite Collaborator</button>
+      <button class="btn secondary" type="submit">Add Collaborator Note</button>
       <span id="invite-collaborator-status" role="status"></span>
     </form>
   </div>
   <div class="card">
-    <h4>Audit Log (owner only)</h4>
+    <h4>Audit Log</h4>
     <div id="audit-log">Loading...</div>
   </div>
   <div class="card">

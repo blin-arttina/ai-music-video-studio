@@ -35,13 +35,14 @@ class Config:
         )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # --- Blind Art Server integration ---
-    # This app authenticates its users against the central Blind Art Server
-    # (accounts, JWT auth) instead of keeping its own separate user system.
-    BLIND_ART_SERVER_URL = os.environ.get(
-        "BLIND_ART_SERVER_URL", "https://blind-art-server.onrender.com"
-    )
-    BLIND_ART_SERVER_TIMEOUT = int(os.environ.get("BLIND_ART_SERVER_TIMEOUT", "120"))
+    # --- Local single-user access (no account system) ---
+    # This app has no sign-in of its own and no longer authenticates against
+    # the Blind Art Server or any other account system. It's reached only by
+    # people who have its address, and every visitor is treated as this one
+    # local "creator" account, which just labels rows in this app's own
+    # local database (nothing is sent anywhere).
+    DEFAULT_OWNER_EMAIL = os.environ.get("DEFAULT_OWNER_EMAIL", "creator@music-video-studio.local")
+    DEFAULT_OWNER_NAME = os.environ.get("DEFAULT_OWNER_NAME", "Creator")
 
     # --- Upload limits ---
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_UPLOAD_MB", "500")) * 1024 * 1024

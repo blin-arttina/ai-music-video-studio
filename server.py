@@ -19,11 +19,10 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, jsonify, request, session, send_file, render_template, redirect, url_for
+from flask import Flask, jsonify, request, session, send_file, render_template
 from werkzeug.utils import secure_filename
 
 from config import get_config
-from source.project.auth_client import BlindArtAuthClient, BlindArtAuthError
 from source.project.models import (
     db, Project, MediaAsset, TextContent, TextRevision,
     OwnershipRecord, AuditLogEntry, Collaborator, Track, Clip, new_id,
@@ -58,20 +57,26 @@ app.config.from_object(CONFIG)
 app.config["MAX_CONTENT_LENGTH"] = CONFIG.MAX_CONTENT_LENGTH
 
 db.init_app(app)
-auth_client = BlindArtAuthClient()
-
 
 # --------------------------------------------------------------------
 # Auth helpers
 # --------------------------------------------------------------------
+# This app no longer requires signing in through the Blind Art Server (or
+# any account system). It's reached only by people who have its address,
+# and every visitor is treated as the same single local "creator" account,
+# so the existing ownership / ownership-record code below -- which is all
+# keyed on an email address -- keeps working unchanged. Nothing here is
+# sent anywhere; it only labels rows in this app's own local database.
+def _ensure_local_session():
+    if not session.get("email"):
+        session["email"] = CONFIG.DEFAULT_OWNER_EMAIL
+        session["name"] = CONFIG.DEFAULT_OWNER_NAME
+
 
 def login_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if not session.get("email") or not session.get("token"):
-            if request.path.startswith("/api/"):
-                return jsonify({"error": "authentication required"}), 401
-            return redirect(url_for("login_page"))
+        _ensure_local_session()
         return fn(*args, **kwargs)
     return wrapper
 
@@ -112,74 +117,11 @@ def log_audit(project_id: str, action: str, detail: str = ""):
 
 @app.route("/")
 def index():
-    if not session.get("email"):
-        return redirect(url_for("login_page"))
+    _ensure_local_session()
     projects = Project.query.filter_by(owner_email=current_user_email()).order_by(
         Project.updated_at.desc()
     ).all()
     return render_template("index.html", projects=projects, user_name=current_user_name())
-
-
-@app.route("/login")
-def login_page():
-    return render_template("login.html", server_url=CONFIG.BLIND_ART_SERVER_URL)
-
-
-@app.route("/auth/login", methods=["POST"])
-def do_login():
-    email = request.form.get("email", "").strip()
-    password = request.form.get("password", "")
-    try:
-        token = auth_client.login(email, password)
-        me = auth_client.me(token)
-    except BlindArtAuthError as exc:
-        return render_template("login.html", server_url=CONFIG.BLIND_ART_SERVER_URL, error=str(exc))
-    session["token"] = token
-    session["email"] = email
-    session["name"] = me.get("name") or email
-    return redirect(url_for("index"))
-
-
-@app.route("/auth/logout", methods=["POST"])
-def do_logout():
-    session.clear()
-    return redirect(url_for("login_page"))
-
-
-@app.route("/signup")
-def signup_page():
-    return render_template("signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL)
-
-
-@app.route("/auth/signup", methods=["POST"])
-def do_signup():
-    name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip()
-    password = request.form.get("password", "")
-    confirm = request.form.get("confirm_password", "")
-    if not email or not password:
-        return render_template(
-            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
-            error="Email and password are required.", name=name, email=email,
-        )
-    if password != confirm:
-        return render_template(
-            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
-            error="Passwords do not match.", name=name, email=email,
-        )
-    try:
-        auth_client.signup(email, password, name)
-        token = auth_client.login(email, password)
-        me = auth_client.me(token)
-    except BlindArtAuthError as exc:
-        return render_template(
-            "signup.html", server_url=CONFIG.BLIND_ART_SERVER_URL,
-            error=str(exc), name=name, email=email,
-        )
-    session["token"] = token
-    session["email"] = email
-    session["name"] = me.get("name") or name or email
-    return redirect(url_for("index"))
 
 
 @app.route("/project/<project_id>")

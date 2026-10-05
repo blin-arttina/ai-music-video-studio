@@ -8,5 +8,3 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
-      - key: BLIND_ART_SERVER_URL
-        value: https://blind-art-server.onrender.com
