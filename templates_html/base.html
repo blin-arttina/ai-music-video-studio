@@ -15,11 +15,15 @@
          alt="" onerror="this.style.display='none'">
     <h1>AI-Assisted Music Studio and Video Generator</h1>
   </header>
+  <nav class="app-nav" aria-label="Main navigation">
+    <a href="{{ url_for('index') }}">Main Menu</a>
+    <a href="{{ url_for('about_page') }}">About / What This App Does</a>
+  </nav>
   <main id="main-content">
     {% block content %}{% endblock %}
   </main>
   <footer class="app-footer">
-    Connected to Blind Art Server &middot; Watermarking and text ownership protection are always on.
+    Watermarking and text ownership protection are always on.
   </footer>
   {% block scripts %}{% endblock %}
 </body>

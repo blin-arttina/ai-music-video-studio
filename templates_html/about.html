@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}About This App — AI-Assisted Music Studio{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('index') }}">&larr; Main Menu</a></p>
+<h2>What This App Does</h2>
+<p>This is an all-in-one studio for writing, recording, arranging, and exporting music and
+video — built so every control works with a keyboard and a screen reader, not just a mouse.
+There's no sign-in: opening this app's web address is what gives you access, and everything
+you create is saved automatically to this app's own project database. Below is a plain-language
+tour of every part of it, so you know it's here before you go looking for it.</p>
+
+<section class="card">
+  <h3>Main Menu</h3>
+  <p>Where you land when you open the app. From here you can start a brand-new project, import
+  a project ZIP you exported earlier (on this device or any other), and see every project
+  you've started so far. Everything else below lives inside a project, once you've created
+  one.</p>
+</section>
+
+<section class="card">
+  <h3>Music &amp; Text Studio</h3>
+  <p>Write and save lyrics, notes, scripts, poems, captions, dialogue, or narration. Every time
+  you save, it's fingerprinted, timestamped, versioned, and recorded in a permanent ownership
+  history you can view or export with a copyright notice attached. While you're typing, your
+  work is kept as a local draft automatically, so closing the tab or reloading the page by
+  accident never loses it.</p>
+</section>
+
+<section class="card">
+  <h3>Media Library</h3>
+  <p>Upload images, audio, music, video, voice recordings, animation files, or fonts — or record
+  straight from your microphone into the project. Every audio, video, or image file gets a
+  built-in player or preview. When you're ready to share a finished image or video, "Export
+  With Watermark" adds a visible creator watermark (and optionally a hidden one) and lets you
+  choose resolution, frame rate, and file format before downloading.</p>
+</section>
+
+<section class="card">
+  <h3>Library (Free Starter Content)</h3>
+  <p>Ready-made project templates (like "Song with Vocals + Instrumental" or "Narrated Video")
+  that instantly set up a Timeline for you, plus a few free original tones and background
+  images you can drop straight into your Media Library. No account, payment, or third-party
+  stock involved.</p>
+</section>
+
+<section class="card">
+  <h3>Timeline</h3>
+  <p>Build a multi-track arrangement — add tracks for music, vocals, dialogue, sound effects,
+  images, video, animation, or text, then add clips to them. Every clip is placed and trimmed
+  using exact number fields (start time, duration, volume, fades) instead of dragging, so
+  every value is readable and adjustable with a screen reader. Audio and video effects
+  (EQ, reverb, crop, captions, crossfades, and more) are all here too, with Undo/Redo covering
+  every change.</p>
+</section>
+
+<section class="card">
+  <h3>AI Assistant</h3>
+  <p>Ask a question about the app or your project, get a draft set of lyrics or a video/scene
+  plan to start from, or generate real spoken-word audio with AI Voice (a free, self-hosted
+  voice model — no account or per-use cost). The AI always hands you a draft to edit, never a
+  finished decision. AI Music, Image, and Animation generation show plainly whether a
+  generation provider is connected on the server — never a faked result if one isn't.</p>
+</section>
+
+<section class="card">
+  <h3>Project Tools</h3>
+  <p>Back up or fully export a project as a ZIP (this is also how you keep your own copy on
+  your device, Google Drive, Dropbox, or Google One — you choose where it goes), duplicate or
+  rename a project, keep a running audit log, or delete a project permanently. Since this app
+  has no separate logins, anyone with the app's web address already has full access to every
+  project — treat that address like a password.</p>
+</section>
+
+<section class="card">
+  <h3>Settings</h3>
+  <p>Toggle whether a project is private, and save a studio name or logo once so it's used
+  automatically as your watermark across every project, current and future. Watermarking and
+  text ownership protection are always on and can't be turned off, by design.</p>
+</section>
+
+<section class="card">
+  <h3>Accessibility</h3>
+  <p>Dark background, large high-contrast text, large buttons, descriptive labels instead of
+  icon-only controls, full keyboard operability, and a "Skip to main content" link on every
+  page. If something here ever reads out of order or skips content for you, tell the person
+  maintaining this app — that's a bug to fix, not something to work around.</p>
+</section>
+{% endblock %}

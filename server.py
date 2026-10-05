@@ -124,6 +124,12 @@ def index():
     return render_template("index.html", projects=projects, user_name=current_user_name())
 
 
+@app.route("/about")
+def about_page():
+    _ensure_local_session()
+    return render_template("about.html")
+
+
 @app.route("/project/<project_id>")
 @login_required
 def project_page(project_id):

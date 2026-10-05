@@ -71,6 +71,26 @@ header.app-header h1 {
   flex: 1;
 }
 
+nav.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 12px 24px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+nav.app-nav a {
+  color: inherit;
+  text-decoration: underline;
+  font-size: 1rem;
+}
+
+nav.app-nav a:hover,
+nav.app-nav a:focus-visible {
+  text-decoration-thickness: 2px;
+}
+
 main {
   max-width: 1000px;
   margin: 0 auto;
