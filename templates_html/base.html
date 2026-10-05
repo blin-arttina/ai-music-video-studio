@@ -11,20 +11,58 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="app-header">
+    <button type="button" class="hamburger-btn" id="nav-toggle"
+            aria-expanded="false" aria-controls="site-nav-drawer">
+      <span aria-hidden="true" class="hamburger-icon">&#9776;</span>
+      <span class="sr-only">Open menu</span>
+    </button>
     <img class="app-icon" src="{{ url_for('static', filename='icons/music.png') }}"
          alt="" onerror="this.style.display='none'">
     <h1>AI-Assisted Music Studio and Video Generator</h1>
+    <button type="button" class="speaker-btn" id="read-aloud-btn" aria-pressed="false">
+      <span aria-hidden="true" class="speaker-icon">&#128266;</span>
+      <span class="sr-only">Read this page aloud</span>
+    </button>
   </header>
-  <nav class="app-nav" aria-label="Main navigation">
-    <a href="{{ url_for('index') }}">Main Menu</a>
-    <a href="{{ url_for('about_page') }}">About / What This App Does</a>
+
+  <div class="nav-overlay" id="nav-overlay" hidden></div>
+  <nav class="nav-drawer" id="site-nav-drawer" aria-label="Main navigation" aria-hidden="true">
+    <button type="button" class="nav-drawer-close" id="nav-close">
+      <span aria-hidden="true">&times;</span>
+      <span class="sr-only">Close menu</span>
+    </button>
+
+    <h2 class="nav-drawer-heading">Get Started</h2>
+    <ul class="nav-drawer-list">
+      <li><a href="{{ url_for('index') }}">Main Menu</a></li>
+      <li><a href="{{ url_for('about_page') }}">About / What This App Does</a></li>
+    </ul>
+
+    <h2 class="nav-drawer-heading">Jump to a Section</h2>
+    {% if nav_project_id %}
+    <p class="nav-drawer-hint">Goes straight there{% if not project %}, in your most recent project{% endif %} — handy if you want to work on the music before the lyrics, or jump to any part out of order.</p>
+    <ul class="nav-drawer-list">
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-text">Music &amp; Text Studio</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-media">Media Library</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-library">Library</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-timeline">Timeline</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-ai">AI Assistant</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-project">Project</a></li>
+      <li><a href="{{ url_for('project_page', project_id=nav_project_id) }}#tab-settings">Settings</a></li>
+    </ul>
+    {% else %}
+    <p class="nav-drawer-hint">Create a project from the Main Menu first, and its tools will show up here for quick jumping.</p>
+    {% endif %}
   </nav>
+
   <main id="main-content">
     {% block content %}{% endblock %}
   </main>
   <footer class="app-footer">
     Watermarking and text ownership protection are always on.
   </footer>
+  <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/read-aloud.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

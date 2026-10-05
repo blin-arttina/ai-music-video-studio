@@ -3,6 +3,26 @@
 {% block content %}
 <h2>Main Menu</h2>
 
+{% if projects %}
+<section class="card">
+  <h3>Jump Back In</h3>
+  <p class="hint">Straight into a tool inside your most recent project
+    (<strong>{{ projects[0].name }}</strong>) — skips opening the project first.</p>
+  <div class="shortcut-buttons">
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-text">Music &amp; Text Studio</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-media">Media Library</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-library">Library</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-timeline">Timeline</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-ai">AI Assistant</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-project">Project</a>
+    <a class="btn secondary" href="{{ url_for('project_page', project_id=projects[0].id) }}#tab-settings">Settings</a>
+  </div>
+  {% if projects|length > 1 %}
+  <p class="hint">Working in a different project? Pick it from "Recent Projects" below first.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card">
   <h3>Welcome</h3>
   <p>This app is a full music and video studio: write lyrics and scripts, record and upload

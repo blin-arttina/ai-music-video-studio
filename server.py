@@ -115,19 +115,31 @@ def log_audit(project_id: str, action: str, detail: str = ""):
 # Pages
 # --------------------------------------------------------------------
 
+def _most_recent_project_id():
+    """The project the hamburger menu's quick-links point into when the
+    visitor isn't currently inside one -- just the most recently updated
+    project, or None if there aren't any yet."""
+    p = Project.query.filter_by(owner_email=current_user_email()).order_by(
+        Project.updated_at.desc()
+    ).first()
+    return p.id if p else None
+
+
 @app.route("/")
 def index():
     _ensure_local_session()
     projects = Project.query.filter_by(owner_email=current_user_email()).order_by(
         Project.updated_at.desc()
     ).all()
-    return render_template("index.html", projects=projects, user_name=current_user_name())
+    nav_project_id = projects[0].id if projects else None
+    return render_template("index.html", projects=projects, user_name=current_user_name(),
+                            nav_project_id=nav_project_id)
 
 
 @app.route("/about")
 def about_page():
     _ensure_local_session()
-    return render_template("about.html")
+    return render_template("about.html", nav_project_id=_most_recent_project_id())
 
 
 @app.route("/project/<project_id>")
@@ -136,7 +148,8 @@ def project_page(project_id):
     project = Project.query.get_or_404(project_id)
     if not owns_or_has_permission(project, "view"):
         return jsonify({"error": "forbidden"}), 403
-    return render_template("project.html", project=project, user_name=current_user_name())
+    return render_template("project.html", project=project, user_name=current_user_name(),
+                            nav_project_id=project.id)
 
 
 @app.route("/project/<project_id>/text/<text_id>/ownership")

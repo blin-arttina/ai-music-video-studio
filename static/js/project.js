@@ -5,16 +5,36 @@
 
   // ---- Tabs ----
   const tabs = document.querySelectorAll('[role="tab"]');
+
+  function activateTab(tab) {
+    if (!tab) return;
+    tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
+    document.querySelectorAll('.tabpanel').forEach((p) => { p.hidden = true; p.classList.remove('active'); });
+    tab.setAttribute('aria-selected', 'true');
+    const panel = document.getElementById(tab.dataset.target);
+    panel.hidden = false;
+    panel.classList.add('active');
+    tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
   tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
-      document.querySelectorAll('.tabpanel').forEach((p) => { p.hidden = true; p.classList.remove('active'); });
-      tab.setAttribute('aria-selected', 'true');
-      const panel = document.getElementById(tab.dataset.target);
-      panel.hidden = false;
-      panel.classList.add('active');
-    });
+    tab.addEventListener('click', () => activateTab(tab));
   });
+
+  // Jump straight to a tab via URL hash (e.g. a Main Menu shortcut button
+  // linking to /project/<id>#tab-timeline), so returning users can open a
+  // specific tool directly instead of landing on the first tab every time.
+  function activateTabFromHash() {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    const targetTab = document.getElementById(hash);
+    if (targetTab && targetTab.getAttribute('role') === 'tab') {
+      activateTab(targetTab);
+      targetTab.focus({ preventScroll: true });
+    }
+  }
+  activateTabFromHash();
+  window.addEventListener('hashchange', activateTabFromHash);
 
   // ---- Studio branding (account-wide, not scoped to this project) ----
   let studioBrand = { studio_name: '', has_logo: false };
