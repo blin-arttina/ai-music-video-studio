@@ -126,6 +126,16 @@ header.app-header h1 {
 }
 .speaker-icon { font-size: 1.5rem; line-height: 1; }
 
+.read-aloud-status:empty { display: none; }
+.read-aloud-status {
+  margin: 0;
+  padding: 10px 24px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
 /* ---- Off-canvas nav drawer ---- */
 .nav-overlay {
   position: fixed;
