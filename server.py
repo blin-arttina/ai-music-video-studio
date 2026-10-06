@@ -58,6 +58,20 @@ app.config["MAX_CONTENT_LENGTH"] = CONFIG.MAX_CONTENT_LENGTH
 
 db.init_app(app)
 
+# Make sure every storage folder under DATA_DIR actually exists before
+# anything tries to save into it. On a brand-new persistent disk (freshly
+# attached on Render, nothing written to it yet) these folders don't exist
+# until something creates them -- without this, the very first save after
+# attaching a disk could fail outright instead of just working.
+for _dir in (
+    CONFIG.PROJECTS_DIR,
+    CONFIG.ASSETS_DIR,
+    CONFIG.EXPORTS_DIR,
+    CONFIG.BACKUPS_DIR,
+    CONFIG.PROTECTION_DIR,
+):
+    _dir.mkdir(parents=True, exist_ok=True)
+
 # --------------------------------------------------------------------
 # Auth helpers
 # --------------------------------------------------------------------

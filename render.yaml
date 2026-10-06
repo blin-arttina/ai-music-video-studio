@@ -2,9 +2,15 @@ services:
   - type: web
     name: ai-music-video-studio
     runtime: python
-    plan: free
+    plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn server:app
+    disk:
+      name: music-studio-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: DATA_DIR
+        value: /var/data

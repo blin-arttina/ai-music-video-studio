@@ -11,6 +11,17 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
+# Everything the app actually needs to keep -- the database file and every
+# project's saved media/text/exports -- lives under DATA_DIR rather than
+# next to the app's own code. On a plain Render web service (no persistent
+# disk attached), this defaults to BASE_DIR, which sits on temporary storage
+# that Render can wipe on a restart or redeploy -- fine for local use, but
+# not safe for real projects once this is deployed. Setting the DATA_DIR
+# environment variable to a Render persistent disk's mount path (e.g.
+# /var/data, once a disk is attached to this service) makes projects survive
+# restarts and redeploys instead of disappearing.
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(BASE_DIR)))
+
 
 class Config:
     # --- Core app ---
@@ -18,15 +29,15 @@ class Config:
     APP_NAME = "AI-Assisted Music Studio and Video Generator"
 
     # --- Local storage (per-project folders live under here) ---
-    PROJECTS_DIR = BASE_DIR / "projects"
-    ASSETS_DIR = BASE_DIR / "assets"
-    EXPORTS_DIR = BASE_DIR / "exports"
-    BACKUPS_DIR = BASE_DIR / "backups"
-    PROTECTION_DIR = BASE_DIR / "protection"
+    PROJECTS_DIR = DATA_DIR / "projects"
+    ASSETS_DIR = DATA_DIR / "assets"
+    EXPORTS_DIR = DATA_DIR / "exports"
+    BACKUPS_DIR = DATA_DIR / "backups"
+    PROTECTION_DIR = DATA_DIR / "protection"
 
     # --- Database (local project/user index) ---
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{BASE_DIR / 'studio.db'}"
+        "DATABASE_URL", f"sqlite:///{DATA_DIR / 'studio.db'}"
     )
     # Render gives postgres:// but SQLAlchemy needs postgresql://
     if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):

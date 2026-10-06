@@ -1,0 +1,12 @@
+*.pyc
+__pycache__/
+.env
+studio.db
+configuration/.auth_cache.json
+projects/*/
+!projects/.gitkeep
+exports/*
+!exports/.gitkeep
+backups/*
+!backups/.gitkeep
+*.db
